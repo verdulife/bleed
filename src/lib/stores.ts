@@ -1,6 +1,7 @@
-import { writable } from 'svelte/store';
+import { writable, type Writable } from 'svelte/store';
+import type { UserFile, UserSettings } from './types';
 
-export const userSettings = writable({
+export const userSettings: Writable<UserSettings> = writable({
 	width: 0,
 	height: 0,
 	bleed: 0,
@@ -8,4 +9,4 @@ export const userSettings = writable({
 	repetitions: 1
 });
 
-export const userFiles = writable([]);
+export const userFiles: Writable<Array<UserFile>> = writable([]);
