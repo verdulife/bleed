@@ -1,17 +1,18 @@
 <script lang="ts">
 	import { userFiles } from '@/lib/stores';
-	import { getFileURL, inputFileAsync } from '@/lib/utils';
+	import { getFileType, inputFileAsync } from '@/lib/utils';
 
-  async function addFiles() {
-    const files = await inputFileAsync();
+	async function addFiles() {
+		const files = await inputFileAsync();
 
-    Array.from(files).forEach(async file => {
-      const fileBuffer = await file.arrayBuffer();
-      
-      $userFiles.push(fileBuffer);
-      $userFiles = $userFiles;
-    })
-  };
+		Array.from(files).forEach(async (file) => {
+			const fileType = getFileType(file);
+			const fileBuffer = await file.arrayBuffer();
+
+			$userFiles.push({ fileType, fileBuffer });
+			$userFiles = $userFiles;
+		});
+	}
 </script>
 
 <main>

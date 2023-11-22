@@ -1,6 +1,7 @@
 import { PDFDocument } from 'pdf-lib';
 import { get } from 'svelte/store';
-import { userSettings, userFiles } from '@/lib/stores';
+import { userSettings, userFiles, previewBlobUri } from '@/lib/stores';
+import { fileHandlers } from './file-handle';
 
 export async function generatePDF() {
 	const settings = get(userSettings);
@@ -9,14 +10,16 @@ export async function generatePDF() {
 	const pdfDoc = await PDFDocument.create();
 
 	for (const file of files) {
-		// Agrega el archivo al documento PDF
-		// Aquí debes implementar la lógica específica según el tipo de archivo
-	}
+		const { fileType, fileBuffer } = file;
 
-	// Aplica medidas y configuraciones adicionales según las preferencias del usuario
-	// Implementa lógica específica según las preferencias del usuario
+		if (fileHandlers[fileType]) {
+			await fileHandlers[fileType](pdfDoc, fileBuffer, settings);
+		}
+	}
 
 	const pdfBytes = await pdfDoc.save();
 	const pdfBlob = new Blob([pdfBytes], { type: 'application/pdf' });
-	return URL.createObjectURL(pdfBlob);
+	const blobUri = URL.createObjectURL(pdfBlob);
+
+	previewBlobUri.set(blobUri);
 }

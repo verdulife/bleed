@@ -10,3 +10,5 @@ export const userSettings: Writable<UserSettings> = writable({
 });
 
 export const userFiles: Writable<Array<UserFile>> = writable([]);
+
+export const previewBlobUri = writable("");

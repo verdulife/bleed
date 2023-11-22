@@ -6,4 +6,7 @@ export type UserSettings = {
 	repetitions: number;
 };
 
-export type UserFile = ArrayBuffer;
+export type UserFile = {
+	fileType: string;
+	fileBuffer: ArrayBuffer;
+};
