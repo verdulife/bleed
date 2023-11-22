@@ -1,5 +1,5 @@
 import { PDFDocument } from 'pdf-lib';
-import { applyUserSettings } from './utils';
+import { applyUserSettings, getImagePosition, getImageSize } from './utils';
 import type { UserSettings } from './types';
 
 const FILE_TYPE = {
@@ -20,18 +20,26 @@ export const fileHandlers = {
 	},
 	async [FILE_TYPE.JPEG](pdfDoc: PDFDocument, file: ArrayBuffer, settings: UserSettings) {
 		const image = await pdfDoc.embedJpg(file);
-		const page = pdfDoc.addPage();
-		const { width, height } = page.getSize();
 
+		const page = pdfDoc.addPage();
 		applyUserSettings(page, settings);
-		page.drawImage(image, { x: 0, y: 0, width, height });
+
+		const pageSize = page.getSize();
+		const imageSize = getImageSize(image, pageSize);
+		const imagePosition = getImagePosition(imageSize, pageSize);
+
+		page.drawImage(image, imagePosition);
 	},
 	async [FILE_TYPE.PNG](pdfDoc: PDFDocument, file: ArrayBuffer, settings: UserSettings) {
 		const image = await pdfDoc.embedPng(file);
-		const page = pdfDoc.addPage();
-		const { width, height } = page.getSize();
 
+		const page = pdfDoc.addPage();
 		applyUserSettings(page, settings);
-		page.drawImage(image, { x: 0, y: 0, width, height });
+
+		const pageSize = page.getSize();
+		const imageSize = getImageSize(image, pageSize);
+		const imagePosition = getImagePosition(imageSize, pageSize);
+
+		page.drawImage(image, imagePosition);
 	}
 };

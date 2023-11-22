@@ -5,7 +5,7 @@ export const userSettings: Writable<UserSettings> = writable({
 	width: 0,
 	height: 0,
 	bleed: 0,
-	cutMarks: false,
+	cropMarks: 0,
 	repetitions: 1
 });
 

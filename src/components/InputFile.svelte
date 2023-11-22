@@ -15,8 +15,9 @@
 	}
 </script>
 
-<main>
-	<button on:click={addFiles} class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-700">
-		Añadir
-	</button>
-</main>
+<button
+	on:click={addFiles}
+	class="w-full bg-slate-600 text-white px-4 py-2 rounded hover:bg-slate-700 transition-colors"
+>
+	Add Images/PDF's
+</button>
