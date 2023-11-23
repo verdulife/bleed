@@ -44,9 +44,10 @@ export const fileHandlers = {
 
 		embedPages.forEach(async (embedPage) => {
 			const page = pdfDoc.addPage();
-			applyUserSettings(page, settings);
+			await applyUserSettings(page, settings);
 
-			const scaleAndPosition = await getEmbedPageScaleAndPosition(embedPage, page);
+			const trimSize = page.getTrimBox();
+			const scaleAndPosition = await getEmbedPageScaleAndPosition(embedPage, trimSize);
 			page.drawPage(embedPage, scaleAndPosition);
 		});
 	},
@@ -55,11 +56,10 @@ export const fileHandlers = {
 		const image = await pdfDoc.embedJpg(file);
 
 		const page = pdfDoc.addPage();
-		applyUserSettings(page, settings);
+		await applyUserSettings(page, settings);
 
-		const pageSize = page.getSize();
-		const imageSize = getImageSize(image, pageSize);
-		const imagePosition = getImagePosition(imageSize, pageSize);
+		const imageSize = getImageSize(image, page);
+		const imagePosition = getImagePosition(imageSize, page);
 
 		page.drawImage(image, imagePosition);
 	},
@@ -68,11 +68,10 @@ export const fileHandlers = {
 		const image = await pdfDoc.embedPng(file);
 
 		const page = pdfDoc.addPage();
-		applyUserSettings(page, settings);
+		await applyUserSettings(page, settings);
 
-		const pageSize = page.getSize();
-		const imageSize = getImageSize(image, pageSize);
-		const imagePosition = getImagePosition(imageSize, pageSize);
+		const imageSize = getImageSize(image, page);
+		const imagePosition = getImagePosition(imageSize, page);
 
 		page.drawImage(image, imagePosition);
 	}

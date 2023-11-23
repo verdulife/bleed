@@ -1,46 +1,105 @@
-import { type PDFPage, rgb } from 'pdf-lib';
+import { type PDFPage, cmyk } from 'pdf-lib';
 import { CROPLINE, MM_TO_POINTS } from './constants';
 
 export function addCropMarks(page: PDFPage) {
 	const width = page.getWidth();
 	const height = page.getHeight();
-	const lineSizeMM = CROPLINE.SIZE * MM_TO_POINTS;
-	const lineDistanceMM = CROPLINE.DISTANCE * MM_TO_POINTS;
+	const lineSize = CROPLINE.SIZE * MM_TO_POINTS;
+	const lineDistance = CROPLINE.DISTANCE * MM_TO_POINTS;
 
-	const corners = [
-		{ x: 0, y: lineDistanceMM },
-		{ x: width, y: lineDistanceMM },
-		{ x: 0, y: height - lineDistanceMM },
-		{ x: width, y: height - lineDistanceMM }
-	];
+	//bottom left
+	page.drawLine({
+		start: { x: 0, y: lineDistance },
+		end: { x: lineSize, y: lineDistance },
+		thickness: 0.75,
+		color: cmyk(1, 1, 1, 1)
+	});
+	page.drawLine({
+		start: { x: 0, y: lineDistance },
+		end: { x: lineSize, y: lineDistance },
+		thickness: 0.25
+	});
+	page.drawLine({
+		start: { x: lineDistance, y: 0 },
+		end: { x: lineDistance, y: lineSize },
+		thickness: 0.75,
+		color: cmyk(1, 1, 1, 1)
+	});
+	page.drawLine({
+		start: { x: lineDistance, y: 0 },
+		end: { x: lineDistance, y: lineSize },
+		thickness: 0.25
+	});
 
-	corners.forEach((corner) => {
-		// Vertical lines
-		page.drawLine({
-			start: { x: corner.x, y: corner.y },
-			end: { x: corner.x, y: corner.y + lineSizeMM },
-			thickness: 0.75,
-			color: rgb(1, 1, 1)
-		});
+	//bottom right
+	page.drawLine({
+		start: { x: width, y: lineDistance },
+		end: { x: width - lineSize, y: lineDistance },
+		thickness: 0.75,
+		color: cmyk(1, 1, 1, 1)
+	});
+	page.drawLine({
+		start: { x: width, y: lineDistance },
+		end: { x: width - lineSize, y: lineDistance },
+		thickness: 0.25
+	});
+	page.drawLine({
+		start: { x: width - lineDistance, y: 0 },
+		end: { x: width - lineDistance, y: lineSize },
+		thickness: 0.75,
+		color: cmyk(1, 1, 1, 1)
+	});
+	page.drawLine({
+		start: { x: width - lineDistance, y: 0 },
+		end: { x: width - lineDistance, y: lineSize },
+		thickness: 0.25
+	});
 
-		page.drawLine({
-			start: { x: corner.x, y: corner.y },
-			end: { x: corner.x, y: corner.y + lineSizeMM },
-			thickness: 0.25
-		});
+	//top left
+	page.drawLine({
+		start: { x: 0, y: height - lineDistance },
+		end: { x: lineSize, y: height - lineDistance },
+		thickness: 0.75,
+		color: cmyk(1, 1, 1, 1)
+	});
+	page.drawLine({
+		start: { x: 0, y: height - lineDistance },
+		end: { x: lineSize, y: height - lineDistance },
+		thickness: 0.25
+	});
+	page.drawLine({
+		start: { x: lineDistance, y: height },
+		end: { x: lineDistance, y: height - lineSize },
+		thickness: 0.75,
+		color: cmyk(1, 1, 1, 1)
+	});
+	page.drawLine({
+		start: { x: lineDistance, y: height },
+		end: { x: lineDistance, y: height - lineSize },
+		thickness: 0.25
+	});
 
-		// Horizontal lines
-		page.drawLine({
-			start: { x: corner.x, y: corner.y },
-			end: { x: corner.x + lineSizeMM, y: corner.y },
-			thickness: 0.75,
-			color: rgb(1, 1, 1)
-		});
-
-		page.drawLine({
-			start: { x: corner.x, y: corner.y },
-			end: { x: corner.x + lineSizeMM, y: corner.y },
-			thickness: 0.25
-		});
+	//top right
+	page.drawLine({
+		start: { x: width, y: height - lineDistance },
+		end: { x: width - lineSize, y: height - lineDistance },
+		thickness: 0.75,
+		color: cmyk(1, 1, 1, 1)
+	});
+	page.drawLine({
+		start: { x: width, y: height - lineDistance },
+		end: { x: width - lineSize, y: height - lineDistance },
+		thickness: 0.25
+	});
+	page.drawLine({
+		start: { x: width - lineDistance, y: height },
+		end: { x: width - lineDistance, y: height - lineSize },
+		thickness: 0.75,
+		color: cmyk(1, 1, 1, 1)
+	});
+	page.drawLine({
+		start: { x: width - lineDistance, y: height },
+		end: { x: width - lineDistance, y: height - lineSize },
+		thickness: 0.25
 	});
 }

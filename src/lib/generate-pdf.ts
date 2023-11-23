@@ -7,6 +7,8 @@ export async function generatePDF() {
 	const settings = get(userSettings);
 	const files = get(userFiles);
 
+	if (files.length === 0) return;
+
 	const pdfDoc = await PDFDocument.create();
 
 	for (const file of files) {
