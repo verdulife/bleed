@@ -1,5 +1,10 @@
 import { PDFDocument } from 'pdf-lib';
-import { applyUserSettings, getImagePosition, getImageSize } from './utils';
+import {
+	applyUserSettings,
+	getEmbedPageScaleAndPosition,
+	getImagePosition,
+	getImageSize
+} from './utils';
 import type { UserSettings } from './types';
 
 const FILE_TYPE = {
@@ -11,13 +16,17 @@ const FILE_TYPE = {
 export const fileHandlers = {
 	async [FILE_TYPE.PDF](pdfDoc: PDFDocument, file: ArrayBuffer, settings: UserSettings) {
 		const existingPdfDoc = await PDFDocument.load(file);
-		const pages = await pdfDoc.copyPages(existingPdfDoc, existingPdfDoc.getPageIndices());
+		const embedPages = await pdfDoc.embedPages(existingPdfDoc.getPages());
 
-		pages.forEach((page) => {
+		embedPages.forEach(async (embedPage) => {
+			const page = pdfDoc.addPage();
 			applyUserSettings(page, settings);
-			pdfDoc.addPage(page);
+
+			const scaleAndPosition = await getEmbedPageScaleAndPosition(embedPage, page);
+			page.drawPage(embedPage, scaleAndPosition);
 		});
 	},
+
 	async [FILE_TYPE.JPEG](pdfDoc: PDFDocument, file: ArrayBuffer, settings: UserSettings) {
 		const image = await pdfDoc.embedJpg(file);
 
@@ -30,6 +39,7 @@ export const fileHandlers = {
 
 		page.drawImage(image, imagePosition);
 	},
+
 	async [FILE_TYPE.PNG](pdfDoc: PDFDocument, file: ArrayBuffer, settings: UserSettings) {
 		const image = await pdfDoc.embedPng(file);
 

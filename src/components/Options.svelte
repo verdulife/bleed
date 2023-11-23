@@ -2,15 +2,18 @@
 	import InputFile from '@/components/InputFile.svelte';
 	import ButtonGenerate from './ButtonGenerate.svelte';
 	import InputSizes from './InputSizes.svelte';
-	import InputCropMarks from './InputCropMarks.svelte';
+	import InputCropMarksAndBleed from './InputCropMarksAndBleed.svelte';
+	import InputMirrorBleed from './InputMirrorBleed.svelte';
+	import Logo from './Logo.svelte';
 </script>
 
-<main class="flex flex-col gap-8 p-8 overflow-hidden">
-	<InputFile />
-	<hr class="border-gray-800" />
+<main class="flex flex-col gap-2 p-6">
+	<Logo></Logo>
+	<hr class="border-gray-800 my-6" />
 	<InputSizes />
-	<hr class="border-gray-800" />
-	<InputCropMarks />
-	<hr class="border-gray-800" />
+	<InputCropMarksAndBleed />
+	<InputMirrorBleed />
+	<InputFile />
+	<hr class="border-gray-800 my-6" />
 	<ButtonGenerate />
 </main>

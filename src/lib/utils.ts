@@ -1,5 +1,5 @@
 import type { DocSize, UserSettings } from './types';
-import type { PDFPage, PDFImage } from 'pdf-lib';
+import type { PDFPage, PDFImage, PDFEmbeddedPage } from 'pdf-lib';
 
 const MM_TO_POINTS = 2.83465;
 
@@ -38,6 +38,25 @@ export function applyUserSettings(page: PDFPage, settings: UserSettings) {
 	const heightMM = height * MM_TO_POINTS;
 
 	page.setSize(widthMM, heightMM);
+}
+
+export async function getEmbedPageScaleAndPosition(embedPage: PDFEmbeddedPage, page: PDFPage) {
+	const { width: embedPageWidth, height: embedPageHeight } = embedPage;
+	const { width: pageWidth, height: pageHeight } = page.getSize();
+
+	const scale = Math.max(pageWidth / embedPageWidth, pageHeight / embedPageHeight);
+	const scaledWidth = embedPageWidth * scale;
+	const scaledHeight = embedPageHeight * scale;
+
+	const xOffset = (pageWidth - scaledWidth) / 2;
+	const yOffset = (pageHeight - scaledHeight) / 2;
+
+	return {
+		x: xOffset,
+		y: yOffset,
+		xScale: scale,
+		yScale: scale
+	};
 }
 
 export function getImageSize(image: PDFImage, pageSize: DocSize) {
