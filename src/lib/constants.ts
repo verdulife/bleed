@@ -8,5 +8,6 @@ export const FILE_TYPE = {
 
 export const CROPLINE = {
 	SIZE: 4,
-	DISTANCE: 6
+	DISTANCE: 6,
+	OVERLAY: 1
 };

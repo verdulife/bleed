@@ -2,8 +2,8 @@ import { writable, type Writable } from 'svelte/store';
 import type { UserFile, UserSettings } from './types';
 
 export const userSettings: Writable<UserSettings> = writable({
-	width: 210,
-	height: 297,
+	width: 85,
+	height: 54,
 	cropMarksAndBleed: 1,
 	bleedSize: 3,
 	mirrorBleed: 0,

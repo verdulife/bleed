@@ -1,11 +1,10 @@
 import type { DocSize, UserSettings } from './types';
 import type { PDFPage, PDFImage, PDFEmbeddedPage } from 'pdf-lib';
 import { CROPLINE, MM_TO_POINTS } from './constants';
-import { addCropMarks } from './crop-marks';
 
 async function getSizeWithCropMarks(sizeMM: DocSize) {
 	const { width: widthMM, height: heightMM } = sizeMM;
-	const cropSizeMM = CROPLINE.SIZE * MM_TO_POINTS;
+	const cropSizeMM = CROPLINE.DISTANCE * MM_TO_POINTS;
 	const width = 2 * cropSizeMM + widthMM;
 	const height = 2 * cropSizeMM + heightMM;
 
@@ -24,21 +23,17 @@ export async function applyUserSettings(page: PDFPage, settings: UserSettings) {
 		const bleedSizeMM = bleedSize * MM_TO_POINTS;
 		const bleedWidthMM = 2 * bleedSizeMM + widthMM;
 		const bleedHeightMM = 2 * bleedSizeMM + heightMM;
-		const cropMarkDistanceMM = CROPLINE.DISTANCE * MM_TO_POINTS;
-		const trimDistanceMM = bleedSizeMM + cropMarkDistanceMM;
+		const cropMarkSizeMM = CROPLINE.SIZE * MM_TO_POINTS - CROPLINE.OVERLAY * MM_TO_POINTS;
+		const trimDistanceMM = bleedSizeMM + cropMarkSizeMM;
 		const mediaSizeMM = await getSizeWithCropMarks({ width: widthMM, height: heightMM });
-
-		//TODO: buscar la diferencia entre el bleed y la marca de corte
 
 		mediaWidthMM = mediaSizeMM.width;
 		mediaHeightMM = mediaSizeMM.height;
 
 		page.setSize(mediaWidthMM, mediaHeightMM);
 		page.setMediaBox(0, 0, mediaWidthMM, mediaHeightMM);
-		page.setBleedBox(cropMarkDistanceMM, cropMarkDistanceMM, bleedWidthMM, bleedHeightMM);
+		page.setBleedBox(cropMarkSizeMM, cropMarkSizeMM, bleedWidthMM, bleedHeightMM);
 		page.setTrimBox(trimDistanceMM, trimDistanceMM, widthMM, heightMM);
-
-		addCropMarks(page);
 	}
 }
 

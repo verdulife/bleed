@@ -3,12 +3,12 @@
 	import Options from "@/components/Options.svelte";
 </script>
 
-<main class="grid grid-cols-5 grid-rows-1 h-screen">
-	<section class="col-span-1 row-span-1">
+<main class="flex flex-col-reverse lg:flex-row h-screen">
+	<section class="w-full lg:w-1/5 lg:min-w-[300px] h-1/4 lg:h-full">
 		<Options />
 	</section>
 
-	<section class="col-span-4 row-span-1">
+	<section class="grow h-3/4 lg:h-full">
 		<slot />
 	</section>
 </main>

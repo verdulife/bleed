@@ -12,7 +12,7 @@ export function addCropMarks(page: PDFPage) {
 		start: { x: 0, y: lineDistance },
 		end: { x: lineSize, y: lineDistance },
 		thickness: 0.75,
-		color: cmyk(1, 1, 1, 1)
+		color: cmyk(0, 0, 0, 0)
 	});
 	page.drawLine({
 		start: { x: 0, y: lineDistance },
@@ -23,7 +23,7 @@ export function addCropMarks(page: PDFPage) {
 		start: { x: lineDistance, y: 0 },
 		end: { x: lineDistance, y: lineSize },
 		thickness: 0.75,
-		color: cmyk(1, 1, 1, 1)
+		color: cmyk(0, 0, 0, 0)
 	});
 	page.drawLine({
 		start: { x: lineDistance, y: 0 },
@@ -36,7 +36,7 @@ export function addCropMarks(page: PDFPage) {
 		start: { x: width, y: lineDistance },
 		end: { x: width - lineSize, y: lineDistance },
 		thickness: 0.75,
-		color: cmyk(1, 1, 1, 1)
+		color: cmyk(0, 0, 0, 0)
 	});
 	page.drawLine({
 		start: { x: width, y: lineDistance },
@@ -47,7 +47,7 @@ export function addCropMarks(page: PDFPage) {
 		start: { x: width - lineDistance, y: 0 },
 		end: { x: width - lineDistance, y: lineSize },
 		thickness: 0.75,
-		color: cmyk(1, 1, 1, 1)
+		color: cmyk(0, 0, 0, 0)
 	});
 	page.drawLine({
 		start: { x: width - lineDistance, y: 0 },
@@ -60,7 +60,7 @@ export function addCropMarks(page: PDFPage) {
 		start: { x: 0, y: height - lineDistance },
 		end: { x: lineSize, y: height - lineDistance },
 		thickness: 0.75,
-		color: cmyk(1, 1, 1, 1)
+		color: cmyk(0, 0, 0, 0)
 	});
 	page.drawLine({
 		start: { x: 0, y: height - lineDistance },
@@ -71,7 +71,7 @@ export function addCropMarks(page: PDFPage) {
 		start: { x: lineDistance, y: height },
 		end: { x: lineDistance, y: height - lineSize },
 		thickness: 0.75,
-		color: cmyk(1, 1, 1, 1)
+		color: cmyk(0, 0, 0, 0)
 	});
 	page.drawLine({
 		start: { x: lineDistance, y: height },
@@ -84,7 +84,7 @@ export function addCropMarks(page: PDFPage) {
 		start: { x: width, y: height - lineDistance },
 		end: { x: width - lineSize, y: height - lineDistance },
 		thickness: 0.75,
-		color: cmyk(1, 1, 1, 1)
+		color: cmyk(0, 0, 0, 0)
 	});
 	page.drawLine({
 		start: { x: width, y: height - lineDistance },
@@ -95,7 +95,7 @@ export function addCropMarks(page: PDFPage) {
 		start: { x: width - lineDistance, y: height },
 		end: { x: width - lineDistance, y: height - lineSize },
 		thickness: 0.75,
-		color: cmyk(1, 1, 1, 1)
+		color: cmyk(0, 0, 0, 0)
 	});
 	page.drawLine({
 		start: { x: width - lineDistance, y: height },
