@@ -1,12 +1,7 @@
 import type { UserSettings } from './types';
 import { PDFDocument } from 'pdf-lib';
 import { FILE_TYPE } from './constants';
-import {
-	applyUserSettings,
-	getEmbedPageScaleAndPosition,
-	getImagePosition,
-	getImageSize
-} from './settings-helpers';
+import { applyUserSettings, getPDFScaleAndPosition, getImagePosition } from './settings-helpers';
 import { addCropMarks } from './crop-marks';
 
 export function getFileURL(file: File) {
@@ -45,11 +40,8 @@ export const fileHandlers = {
 
 		embedPages.forEach(async (embedPage) => {
 			const page = pdfDoc.addPage();
-
 			await applyUserSettings(page, settings);
-
-			const trimSize = page.getTrimBox();
-			const scaleAndPosition = await getEmbedPageScaleAndPosition(embedPage, trimSize);
+			const scaleAndPosition = getPDFScaleAndPosition(embedPage, page);
 
 			page.drawPage(embedPage, scaleAndPosition);
 			if (settings.cropMarksAndBleed) addCropMarks(page);
@@ -59,11 +51,8 @@ export const fileHandlers = {
 	async [FILE_TYPE.JPEG](pdfDoc: PDFDocument, file: ArrayBuffer, settings: UserSettings) {
 		const image = await pdfDoc.embedJpg(file);
 		const page = pdfDoc.addPage();
-
 		await applyUserSettings(page, settings);
-
-		const imageSize = getImageSize(image, page);
-		const imagePosition = getImagePosition(imageSize, page);
+		const imagePosition = getImagePosition(image, page);
 
 		page.drawImage(image, imagePosition);
 		if (settings.cropMarksAndBleed) addCropMarks(page);
@@ -72,11 +61,8 @@ export const fileHandlers = {
 	async [FILE_TYPE.PNG](pdfDoc: PDFDocument, file: ArrayBuffer, settings: UserSettings) {
 		const image = await pdfDoc.embedPng(file);
 		const page = pdfDoc.addPage();
-
 		await applyUserSettings(page, settings);
-
-		const imageSize = getImageSize(image, page);
-		const imagePosition = getImagePosition(imageSize, page);
+		const imagePosition = getImagePosition(image, page);
 
 		page.drawImage(image, imagePosition);
 		if (settings.cropMarksAndBleed) addCropMarks(page);

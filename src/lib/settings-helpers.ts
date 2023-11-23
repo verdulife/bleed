@@ -37,7 +37,8 @@ export async function applyUserSettings(page: PDFPage, settings: UserSettings) {
 	}
 }
 
-export async function getEmbedPageScaleAndPosition(embedPage: PDFEmbeddedPage, trimSize: DocSize) {
+/* export async function getEmbedPageScaleAndPosition(embedPage: PDFEmbeddedPage, page: PDFPage) {
+	const trimSize = page.getTrimBox();
 	const { width: embedPageWidth, height: embedPageHeight } = embedPage;
 	const { width: pageWidth, height: pageHeight } = trimSize;
 
@@ -54,31 +55,52 @@ export async function getEmbedPageScaleAndPosition(embedPage: PDFEmbeddedPage, t
 		xScale: scale,
 		yScale: scale
 	};
-}
+} */
 
-export function getImageSize(image: PDFImage, page: PDFPage) {
-	const imageSize = image.size();
-	const trimSize = page.getTrimBox();
-	const trimAspectRatio = trimSize.width / trimSize.height;
-	const imageAspectRatio = imageSize.width / imageSize.height;
-
-	if (imageAspectRatio < trimAspectRatio) {
-		return {
-			width: trimSize.width,
-			height: trimSize.width / imageAspectRatio
-		};
-	} else {
-		return {
-			width: trimSize.height * imageAspectRatio,
-			height: trimSize.height
-		};
-	}
-}
-
-export function getImagePosition(imageSize: DocSize, page: PDFPage) {
+export function getPDFScaleAndPosition(embedPage: PDFEmbeddedPage, page: PDFPage) {
+	const embedSize = embedPage.size();
 	const pageSize = page.getSize();
-	const x = (pageSize.width - imageSize.width) / 2;
-	const y = (pageSize.height - imageSize.height) / 2;
+	const trimSize = page.getTrimBox();
+	const embedAspectRatio = embedSize.width / embedSize.height;
+	const trimAspectRatio = trimSize.width / trimSize.height;
 
-	return { x, y, width: imageSize.width, height: imageSize.height };
+	let scale, width, height;
+
+	if (embedAspectRatio < trimAspectRatio) {
+		scale = trimSize.width / embedSize.width;
+		width = trimSize.width;
+		height = trimSize.width / embedAspectRatio;
+	} else {
+		scale = trimSize.height / embedSize.height;
+		width = trimSize.height * embedAspectRatio;
+		height = trimSize.height;
+	}
+
+	const x = (pageSize.width - width) / 2;
+	const y = (pageSize.height - height) / 2;
+
+	return { x, y, xScale: scale, yScale: scale };
+}
+
+export function getImagePosition(embedImage: PDFImage, page: PDFPage) {
+	const embedSize = embedImage.size();
+	const pageSize = page.getSize();
+	const trimSize = page.getTrimBox();
+	const embedAspectRatio = embedSize.width / embedSize.height;
+	const trimAspectRatio = trimSize.width / trimSize.height;
+
+	let width, height;
+
+	if (embedAspectRatio < trimAspectRatio) {
+		width = trimSize.width;
+		height = trimSize.width / embedAspectRatio;
+	} else {
+		width = trimSize.height * embedAspectRatio;
+		height = trimSize.height;
+	}
+
+	const x = (pageSize.width - width) / 2;
+	const y = (pageSize.height - height) / 2;
+
+	return { x, y, width, height };
 }

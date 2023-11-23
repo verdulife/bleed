@@ -8,7 +8,7 @@
 		<Options />
 	</section>
 
-	<section class="grow h-3/4 lg:h-full">
+	<section class="grow h-3/4 lg:h-full p-4 pl-0">
 		<slot />
 	</section>
 </main>
