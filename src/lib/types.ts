@@ -2,6 +2,7 @@ export type UserSettings = {
 	width: number;
 	height: number;
 	cropMarksAndBleed: number;
+	bleedSize: number;
 	mirrorBleed: number;
 	repetitions: number;
 };

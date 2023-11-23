@@ -1,43 +1,33 @@
 import type { DocSize, UserSettings } from './types';
 import type { PDFPage, PDFImage, PDFEmbeddedPage } from 'pdf-lib';
+import { CROPLINE, MM_TO_POINTS } from './constants';
 
-const MM_TO_POINTS = 2.83465;
-
-export function getFileURL(file: File) {
-	return URL.createObjectURL(file);
-}
-
-export function getFileType(file: File) {
-	const fileType = file.type.split('/')[1];
-	switch (fileType) {
-		case 'jpeg':
-		case 'png':
-			return fileType;
-		default:
-			return 'pdf';
-	}
-}
-
-export async function inputFileAsync(): Promise<FileList> {
-	const input = document.createElement('input');
-	input.type = 'file';
-	input.multiple = true;
-	input.accept = 'application/pdf, image/jpeg, image/png';
-	input.click();
-
-	return new Promise((resolve) => {
-		input.addEventListener('change', () => {
-			if (input.files) return resolve(input.files);
-		});
-	});
-}
-
-export function applyUserSettings(page: PDFPage, settings: UserSettings) {
-	const { width, height } = settings;
+async function getSizeWithCropMarks(page: PDFPage) {
+	const { width, height } = page.getSize();
 	const widthMM = width * MM_TO_POINTS;
 	const heightMM = height * MM_TO_POINTS;
+	const cropSizeMM = CROPLINE.SIZE * MM_TO_POINTS;
+	const finalWidth = widthMM * cropSizeMM;
+	const finalHeight = heightMM * cropSizeMM;
 
-	page.setSize(widthMM, heightMM);
+	return { width: finalWidth, height: finalHeight };
+}
+
+export async function applyUserSettings(page: PDFPage, settings: UserSettings) {
+	const { width, height, bleedSize } = settings;
+
+	const widthMM = width * MM_TO_POINTS;
+	const heightMM = height * MM_TO_POINTS;
+	const bleedSizeMM = bleedSize * MM_TO_POINTS;
+	const withBleedWidth = 2 * bleedSizeMM + widthMM;
+	const withBleedHeight = 2 * bleedSizeMM + heightMM;
+	const { width: docWidthMM, height: docHeightMM } = await getSizeWithCropMarks(page);
+	const cropDistanceMM = CROPLINE.DISTANCE * MM_TO_POINTS;
+
+	page.setSize(docWidthMM, docHeightMM);
+	page.setMediaBox(0, 0, docWidthMM, docWidthMM);
+	page.setBleedBox(cropDistanceMM, cropDistanceMM, withBleedWidth, withBleedHeight);
+	page.setTrimBox(bleedSizeMM, bleedSizeMM, widthMM, heightMM);
 }
 
 export async function getEmbedPageScaleAndPosition(embedPage: PDFEmbeddedPage, page: PDFPage) {

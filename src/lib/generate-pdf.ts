@@ -1,7 +1,7 @@
 import { PDFDocument } from 'pdf-lib';
 import { get } from 'svelte/store';
 import { userSettings, userFiles, previewBlobUri } from '@/lib/stores';
-import { fileHandlers } from './file-handle';
+import { fileHandlers } from './file-helpers';
 
 export async function generatePDF() {
 	const settings = get(userSettings);

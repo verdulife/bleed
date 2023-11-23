@@ -9,9 +9,7 @@
 
 <OptionBox>
 	<button on:click={toggleState} class="flex justify-between items-center gap-1 w-full">
-		<h3 class="font-semibold text-xs text-gray-400">
-			Crop marks and bleed
-		</h3>
+		<h3 class="font-semibold text-xs text-gray-400">Crop marks and bleed</h3>
 
 		<input
 			type="range"
@@ -19,7 +17,7 @@
 			min={0}
 			max={1}
 			step="1"
-			class="w-6 scale-110 cursor-pointer"
+			class="w-6 scale-110 pointer-events-none"
 		/>
 	</button>
 </OptionBox>

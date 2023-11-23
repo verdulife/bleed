@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { userFiles } from '@/lib/stores';
-	import { getFileType, inputFileAsync } from '@/lib/utils';
+	import { getFileType, inputFileAsync } from '@/lib/file-helpers';
 	import OptionBox from './OptionBox.svelte';
 
 	let isDragOver = false;

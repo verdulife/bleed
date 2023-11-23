@@ -17,7 +17,7 @@
 			min={0}
 			max={1}
 			step="1"
-			class="w-6 scale-110 cursor-pointer"
+			class="w-6 scale-110 pointer-events-none"
 		/>
 	</button>
 </OptionBox>

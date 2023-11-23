@@ -1,17 +1,41 @@
+import type { UserSettings } from './types';
 import { PDFDocument } from 'pdf-lib';
+import { FILE_TYPE } from './constants';
 import {
 	applyUserSettings,
 	getEmbedPageScaleAndPosition,
 	getImagePosition,
 	getImageSize
-} from './utils';
-import type { UserSettings } from './types';
+} from './settings-helpers';
 
-const FILE_TYPE = {
-	PDF: 'pdf',
-	JPEG: 'jpeg',
-	PNG: 'png'
-};
+export function getFileURL(file: File) {
+	return URL.createObjectURL(file);
+}
+
+export function getFileType(file: File) {
+	const fileType = file.type.split('/')[1];
+	switch (fileType) {
+		case 'jpeg':
+		case 'png':
+			return fileType;
+		default:
+			return 'pdf';
+	}
+}
+
+export async function inputFileAsync(): Promise<FileList> {
+	const input = document.createElement('input');
+	input.type = 'file';
+	input.multiple = true;
+	input.accept = 'application/pdf, image/jpeg, image/png';
+	input.click();
+
+	return new Promise((resolve) => {
+		input.addEventListener('change', () => {
+			if (input.files) return resolve(input.files);
+		});
+	});
+}
 
 export const fileHandlers = {
 	async [FILE_TYPE.PDF](pdfDoc: PDFDocument, file: ArrayBuffer, settings: UserSettings) {
