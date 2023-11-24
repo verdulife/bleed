@@ -24,7 +24,7 @@
 	on:dragover|preventDefault={handleDragOver}
 	on:dragleave={handleDragLeave}
 	on:drop|preventDefault={handleDrop}
-	class="w-full h-full"
+	class="w-full h-full cursor-default"
 >
 	<slot />
 

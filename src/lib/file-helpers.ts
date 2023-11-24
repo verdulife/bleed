@@ -3,12 +3,7 @@ import { PDFDocument } from 'pdf-lib';
 import { FILE_TYPE } from './constants';
 import { addCropMarks } from './crop-marks';
 import { closeCropMask, cropMask } from './pdf-extend';
-import {
-	applyUserSettings,
-	getPDFScaleAndPosition,
-	getImagePosition,
-	applyMirroBleedPdf
-} from './settings-helpers';
+import { applyUserSettings, getEmbedSizeAndPosition, applyMirroBleed } from './settings-helpers';
 import { userFiles } from './stores';
 
 export function getFileURL(file: File) {
@@ -58,15 +53,15 @@ export const fileHandlers = {
 		embedPages.forEach(async (embedPage) => {
 			const page = pdfDoc.addPage();
 			await applyUserSettings(page, settings);
-			const scaleAndPosition = getPDFScaleAndPosition(embedPage, page);
+			const embedSizeAndPosition = getEmbedSizeAndPosition(embedPage, page);
 
 			if (settings.cropMarksAndBleed) {
 				const bleedBox = page.getBleedBox();
 				cropMask(page, bleedBox);
 			}
 
-			page.drawPage(embedPage, scaleAndPosition);
-			if (settings.mirrorBleed) applyMirroBleedPdf(embedPage, page);
+			page.drawPage(embedPage, embedSizeAndPosition);
+			if (settings.mirrorBleed) applyMirroBleed(embedPage, page);
 
 			if (settings.cropMarksAndBleed) {
 				closeCropMask(page);
@@ -79,15 +74,15 @@ export const fileHandlers = {
 		const image = await pdfDoc.embedJpg(file);
 		const page = pdfDoc.addPage();
 		await applyUserSettings(page, settings);
-		const imagePosition = getImagePosition(image, page);
+		const embedSizeAndPosition = getEmbedSizeAndPosition(image, page);
 
 		if (settings.cropMarksAndBleed) {
 			const bleedBox = page.getBleedBox();
 			cropMask(page, bleedBox);
 		}
 
-		page.drawImage(image, imagePosition);
-		if (settings.mirrorBleed) applyMirroBleedPdf(image, page);
+		page.drawImage(image, embedSizeAndPosition);
+		if (settings.mirrorBleed) applyMirroBleed(image, page);
 
 		if (settings.cropMarksAndBleed) {
 			closeCropMask(page);
@@ -99,15 +94,15 @@ export const fileHandlers = {
 		const image = await pdfDoc.embedPng(file);
 		const page = pdfDoc.addPage();
 		await applyUserSettings(page, settings);
-		const imagePosition = getImagePosition(image, page);
+		const embedSizeAndPosition = getEmbedSizeAndPosition(image, page);
 
 		if (settings.cropMarksAndBleed) {
 			const bleedBox = page.getBleedBox();
 			cropMask(page, bleedBox);
 		}
 
-		page.drawImage(image, imagePosition);
-		if (settings.mirrorBleed) applyMirroBleedPdf(image, page);
+		page.drawImage(image, embedSizeAndPosition);
+		if (settings.mirrorBleed) applyMirroBleed(image, page);
 
 		if (settings.cropMarksAndBleed) {
 			closeCropMask(page);

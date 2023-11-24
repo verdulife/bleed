@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { userFiles } from '@/lib/stores';
 	import { inputFileAsync, pushFilesToStore } from '@/lib/file-helpers';
 	import OptionBox from './OptionBox.svelte';
+	import FileList from './FileList.svelte';
 
 	async function addFiles() {
 		const files = await inputFileAsync();
@@ -20,16 +20,6 @@
 			Select or drop files
 		</button>
 
-		<ul class="flex flex-col max-h-48 overflow-y-auto overflow-x-hidden">
-			{#each $userFiles as { fileName }}
-				<li class="flex p-2 border-b last:border-b-0 border-slate-400">
-					<p
-						class="font-semibold text-xs text-gray-400 whitespace-nowrap text-ellipsis overflow-hidden max-w-[200px]"
-					>
-						{fileName}
-					</p>
-				</li>
-			{/each}
-		</ul>
+		<FileList></FileList>
 	</fieldset>
 </OptionBox>

@@ -1,4 +1,4 @@
-import { writable, type Writable } from 'svelte/store';
+import { type Writable, writable } from 'svelte/store';
 import type { UserFile, UserSettings } from './types';
 
 export const userSettings: Writable<UserSettings> = writable({
