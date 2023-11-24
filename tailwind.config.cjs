@@ -7,7 +7,7 @@ const config = {
 	theme: {
 		extend: {
 			fontFamily: {
-				sans: ['Geist Mono', fontFamily.sans]
+				sans: ["InterVariable", fontFamily.sans]
 			}
 		}
 	},

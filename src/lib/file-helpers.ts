@@ -9,6 +9,7 @@ import {
 	getImagePosition,
 	applyMirroBleedPdf
 } from './settings-helpers';
+import { userFiles } from './stores';
 
 export function getFileURL(file: File) {
 	return URL.createObjectURL(file);
@@ -36,6 +37,16 @@ export async function inputFileAsync(): Promise<FileList> {
 		input.addEventListener('change', () => {
 			if (input.files) return resolve(input.files);
 		});
+	});
+}
+
+export async function pushFilesToStore(files: FileList) {
+	Array.from(files).forEach(async (file: File) => {
+		const fileType = getFileType(file);
+		const fileBuffer = await file.arrayBuffer();
+		const fileName = file.name;
+
+		userFiles.update((store) => (store = [...store, { fileType, fileBuffer, fileName }]));
 	});
 }
 
