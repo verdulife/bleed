@@ -17,3 +17,10 @@ export type DocSize = {
 	width: number;
 	height: number;
 };
+
+export type PDFCropBox = {
+	x: number;
+	y: number;
+	width: number;
+	height: number;
+};

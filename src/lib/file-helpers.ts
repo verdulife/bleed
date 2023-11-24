@@ -1,8 +1,14 @@
 import type { UserSettings } from './types';
 import { PDFDocument } from 'pdf-lib';
 import { FILE_TYPE } from './constants';
-import { applyUserSettings, getPDFScaleAndPosition, getImagePosition } from './settings-helpers';
 import { addCropMarks } from './crop-marks';
+import { closeCropMask, cropMask } from './pdf-extend';
+import {
+	applyUserSettings,
+	getPDFScaleAndPosition,
+	getImagePosition,
+	applyMirroBleedPdf
+} from './settings-helpers';
 
 export function getFileURL(file: File) {
 	return URL.createObjectURL(file);
@@ -43,8 +49,18 @@ export const fileHandlers = {
 			await applyUserSettings(page, settings);
 			const scaleAndPosition = getPDFScaleAndPosition(embedPage, page);
 
+			if (settings.cropMarksAndBleed) {
+				const bleedBox = page.getBleedBox();
+				cropMask(page, bleedBox);
+			}
+
 			page.drawPage(embedPage, scaleAndPosition);
-			if (settings.cropMarksAndBleed) addCropMarks(page);
+			if (settings.mirrorBleed) applyMirroBleedPdf(embedPage, page);
+
+			if (settings.cropMarksAndBleed) {
+				closeCropMask(page);
+				addCropMarks(page);
+			}
 		});
 	},
 
@@ -54,8 +70,18 @@ export const fileHandlers = {
 		await applyUserSettings(page, settings);
 		const imagePosition = getImagePosition(image, page);
 
+		if (settings.cropMarksAndBleed) {
+			const bleedBox = page.getBleedBox();
+			cropMask(page, bleedBox);
+		}
+
 		page.drawImage(image, imagePosition);
-		if (settings.cropMarksAndBleed) addCropMarks(page);
+		if (settings.mirrorBleed) applyMirroBleedPdf(image, page);
+
+		if (settings.cropMarksAndBleed) {
+			closeCropMask(page);
+			addCropMarks(page);
+		}
 	},
 
 	async [FILE_TYPE.PNG](pdfDoc: PDFDocument, file: ArrayBuffer, settings: UserSettings) {
@@ -64,7 +90,17 @@ export const fileHandlers = {
 		await applyUserSettings(page, settings);
 		const imagePosition = getImagePosition(image, page);
 
+		if (settings.cropMarksAndBleed) {
+			const bleedBox = page.getBleedBox();
+			cropMask(page, bleedBox);
+		}
+
 		page.drawImage(image, imagePosition);
-		if (settings.cropMarksAndBleed) addCropMarks(page);
+		if (settings.mirrorBleed) applyMirroBleedPdf(image, page);
+
+		if (settings.cropMarksAndBleed) {
+			closeCropMask(page);
+			addCropMarks(page);
+		}
 	}
 };
