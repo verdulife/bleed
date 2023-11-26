@@ -1,16 +1,29 @@
 export type UserSettings = {
-	width: number;
-	height: number;
+	artboard: {
+		width: number;
+		height: number;
+	};
+	document: {
+		width: number;
+		height: number;
+	};
+	fit: number;
+	autoRotate: number;
 	cropMarksAndBleed: number;
 	bleedSize: number;
 	mirrorBleed: number;
-	repetitions: number;
+	repeat: number;
+	repeatX: number;
+	repeatY: number;
+	gapX: number;
+	gapY: number;
 };
 
 export type UserFile = {
 	fileType: string;
 	fileBuffer: ArrayBuffer;
 	fileName: string;
+	id: number;
 };
 
 export type DocSize = {

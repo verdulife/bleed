@@ -41,7 +41,10 @@ export async function pushFilesToStore(files: FileList) {
 		const fileBuffer = await file.arrayBuffer();
 		const fileName = file.name;
 
-		userFiles.update((store) => (store = [...store, { fileType, fileBuffer, fileName }]));
+		userFiles.update((store) => {
+			const id = store.length;
+			return store = [...store, { fileType, fileBuffer, fileName, id }]
+		});
 	});
 }
 

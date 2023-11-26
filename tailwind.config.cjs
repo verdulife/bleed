@@ -1,4 +1,5 @@
 import { fontFamily } from 'tailwindcss/defaultTheme';
+import tailwindScrollbar from 'tailwind-scrollbar';
 
 /** @type {import('tailwindcss').Config}*/
 const config = {
@@ -7,12 +8,12 @@ const config = {
 	theme: {
 		extend: {
 			fontFamily: {
-				sans: ["InterVariable", fontFamily.sans]
+				sans: ['InterVariable', fontFamily.sans]
 			}
 		}
 	},
 
-	plugins: []
+	plugins: [tailwindScrollbar]
 };
 
 module.exports = config;

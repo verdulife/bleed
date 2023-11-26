@@ -18,7 +18,8 @@ async function getSizeWithCropMarks(sizeMM: DocSize) {
 }
 
 export async function applyUserSettings(page: PDFPage, settings: UserSettings) {
-	const { width, height, bleedSize } = settings;
+	const { document, bleedSize } = settings;
+	const { width, height } = document;
 	const widthMM = width * MM_TO_POINTS;
 	const heightMM = height * MM_TO_POINTS;
 

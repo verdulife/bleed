@@ -6,7 +6,7 @@
 
 <DropFile>
 	<main class="flex flex-col-reverse lg:flex-row h-screen">
-		<section class="w-full lg:w-1/5 lg:min-w-[300px] h-1/4 lg:h-full">
+		<section class="w-full lg:w-1/5 lg:min-w-[300px] h-1/4 lg:h-full overflow-y-scroll scrollbar-none">
 			<Options />
 		</section>
 

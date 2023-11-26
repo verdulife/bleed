@@ -7,18 +7,15 @@
 	import Trash from '@/icons/Trash.svelte';
 
 	export let file: UserFile;
+	export let removeFile: Function;
 
-	const { fileName, fileType } = file;
+	const { fileName, fileType, id } = file;
 	const [name] = fileName.split('.');
-
-	function removePage() {
-		console.log(file);
-	}
 </script>
 
-<li class="p-2 border-b last:border-b-0 border-slate-900">
-	<article class="relative flex items-center gap-2 max-w-[200px]">
-		<button class="cursor-move">
+<li class="p-2 border-b last:border-b-0 border-slate-900 w-full">
+	<article class="relative flex items-center justify-start gap-2 w-full overflow-hidden text-left">
+		<button class="cursor-move text-gray-500">
 			{#if fileType === FILE_TYPE.JPEG}
 				<Jpg />
 			{:else if fileType === FILE_TYPE.PNG}
@@ -28,11 +25,11 @@
 			{/if}
 		</button>
 
-		<p class="font-semibold text-xs text-gray-400 whitespace-nowrap text-ellipsis overflow-hidden">
+		<p class="font-semibold text-xs text-gray-400 whitespace-nowrap text-ellipsis overflow-hidden max-w-[150px]">
 			{name}
 		</p>
 
-		<button on:click={removePage} class="absolute right-2 text-gray-600">
+		<button on:click={() => removeFile(id)} class=" text-gray-600 ml-auto">
 			<Trash />
 		</button>
 	</article>
