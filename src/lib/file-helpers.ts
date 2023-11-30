@@ -43,7 +43,7 @@ export async function pushFilesToStore(files: FileList) {
 
 		userFiles.update((store) => {
 			const id = store.length;
-			return store = [...store, { fileType, fileBuffer, fileName, id }]
+			return (store = [...store, { fileType, fileBuffer, fileName, id }]);
 		});
 	});
 }

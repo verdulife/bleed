@@ -18,7 +18,7 @@
 
 	<OptionBox>
 		<InputSizes bind:setting={$userSettings.document}>Document size</InputSizes>
-		<InputCheck bind:setting={$userSettings.fit}>Fit in document size</InputCheck>
+		<InputCheck bind:setting={$userSettings.fit}>Fill document size</InputCheck>
 		<InputCheck bind:setting={$userSettings.autoRotate}>Autorotate</InputCheck>
 	</OptionBox>
 

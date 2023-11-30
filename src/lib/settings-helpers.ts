@@ -54,11 +54,11 @@ export function getEmbedSizeAndPosition(embedFile: PDFEmbeddedPage | PDFImage, p
 	const embedAspectRatio = embedFile.width / embedFile.height;
 
 	const width = fit
-		? Math.min(trimSize.width, trimSize.height * embedAspectRatio)
-		: Math.max(trimSize.width, trimSize.height * embedAspectRatio);
+		? Math.max(trimSize.width, trimSize.height * embedAspectRatio)
+		: Math.min(trimSize.width, trimSize.height * embedAspectRatio);
 	const height = fit
-		? Math.min(trimSize.height, trimSize.width / embedAspectRatio)
-		: Math.max(trimSize.height, trimSize.width / embedAspectRatio);
+		? Math.max(trimSize.height, trimSize.width / embedAspectRatio)
+		: Math.min(trimSize.height, trimSize.width / embedAspectRatio);
 
 	const x = (pageSize.width - width) / 2;
 	const y = (pageSize.height - height) / 2;
