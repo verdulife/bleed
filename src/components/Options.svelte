@@ -23,7 +23,7 @@
 	</OptionBox>
 
 	<OptionBox>
-		<InputCheck bind:setting={$userSettings.cropMarksAndBleed}>Add crop marks & bleed</InputCheck>
+		<InputCheck bind:setting={$userSettings.cropMarksAndBleed}>Add crop marks</InputCheck>
 		{#if $userSettings.cropMarksAndBleed}
 			<InputCheck bind:setting={$userSettings.mirrorBleed}>Use mirror bleed</InputCheck>
 		{/if}
