@@ -5,8 +5,6 @@
 	function removeFile(id: number) {
 		$userFiles.filter((file) => file.id !== id);
 	}
-
-	$: console.log($userFiles);
 </script>
 
 <ul

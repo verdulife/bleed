@@ -7,6 +7,8 @@ import type {
 	PDFPageDrawImageOptions
 } from 'pdf-lib';
 import { CROPLINE, MM_TO_POINTS } from './constants';
+import { get } from 'svelte/store';
+import { userSettings } from './stores';
 
 async function getSizeWithCropMarks(sizeMM: DocSize) {
 	const { width: widthMM, height: heightMM } = sizeMM;
@@ -46,20 +48,17 @@ export async function applyUserSettings(page: PDFPage, settings: UserSettings) {
 }
 
 export function getEmbedSizeAndPosition(embedFile: PDFEmbeddedPage | PDFImage, page: PDFPage) {
+	const { fit } = get(userSettings);
 	const pageSize = page.getSize();
 	const trimSize = page.getTrimBox();
 	const embedAspectRatio = embedFile.width / embedFile.height;
-	const trimAspectRatio = trimSize.width / trimSize.height;
 
-	let width, height;
-
-	if (embedAspectRatio < trimAspectRatio) {
-		width = trimSize.width;
-		height = trimSize.width / embedAspectRatio;
-	} else {
-		width = trimSize.height * embedAspectRatio;
-		height = trimSize.height;
-	}
+	const width = fit
+		? Math.min(trimSize.width, trimSize.height * embedAspectRatio)
+		: Math.max(trimSize.width, trimSize.height * embedAspectRatio);
+	const height = fit
+		? Math.min(trimSize.height, trimSize.width / embedAspectRatio)
+		: Math.max(trimSize.height, trimSize.width / embedAspectRatio);
 
 	const x = (pageSize.width - width) / 2;
 	const y = (pageSize.height - height) / 2;

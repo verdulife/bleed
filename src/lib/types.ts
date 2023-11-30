@@ -7,12 +7,12 @@ export type UserSettings = {
 		width: number;
 		height: number;
 	};
-	fit: number;
-	autoRotate: number;
-	cropMarksAndBleed: number;
+	fit: 0 | 1;
+	autoRotate: 0 | 1;
+	cropMarksAndBleed: 0 | 1;
 	bleedSize: number;
-	mirrorBleed: number;
-	repeat: number;
+	mirrorBleed: 0 | 1;
+	repeat: 0 | 1;
 	repeatX: number;
 	repeatY: number;
 	gapX: number;
