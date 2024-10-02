@@ -3,7 +3,6 @@
 
 	import OptionBox from '@/components/OptionBox.svelte';
 	import InputSizes from '@/components/InputSizes.svelte';
-	import InputSize from '@/components/InputSize.svelte';
 	import InputCheck from '@/components/InputCheck.svelte';
 	import InputFile from '@/components/InputFile.svelte';
 	import ButtonGenerate from '@/components/ButtonGenerate.svelte';
@@ -19,7 +18,7 @@
 
 	<OptionBox>
 		<InputSizes bind:setting={$userSettings.document}>Document size</InputSizes>
-		<InputCheck bind:setting={$userSettings.fit}>Fill document size</InputCheck>
+		<InputCheck bind:setting={$userSettings.fit}>Crop to fit</InputCheck>
 		<InputCheck bind:setting={$userSettings.autoRotate}>Autorotate</InputCheck>
 	</OptionBox>
 

@@ -6,9 +6,10 @@ import type {
 	PDFPageDrawPageOptions,
 	PDFPageDrawImageOptions
 } from 'pdf-lib';
-import { CROPLINE, MM_TO_POINTS } from './constants';
 import { get } from 'svelte/store';
-import { userSettings } from './stores';
+import { CROPLINE, MM_TO_POINTS } from '@/lib/constants';
+import { userSettings } from '@/lib/stores';
+import { needsRotation } from './file-helpers';
 
 async function getSizeWithCropMarks(sizeMM: DocSize) {
 	const { width: widthMM, height: heightMM } = sizeMM;
@@ -20,7 +21,7 @@ async function getSizeWithCropMarks(sizeMM: DocSize) {
 }
 
 export async function applyUserSettings(page: PDFPage, settings: UserSettings) {
-	const { document, bleedSize } = settings;
+	const { document, bleedSize, cropMarksAndBleed } = settings;
 	const { width, height } = document;
 	const widthMM = width * MM_TO_POINTS;
 	const heightMM = height * MM_TO_POINTS;
@@ -28,7 +29,7 @@ export async function applyUserSettings(page: PDFPage, settings: UserSettings) {
 	let mediaWidthMM = widthMM;
 	let mediaHeightMM = heightMM;
 
-	if (settings.cropMarksAndBleed) {
+	if (cropMarksAndBleed) {
 		const bleedSizeMM = bleedSize * MM_TO_POINTS;
 		const bleedWidthMM = 2 * bleedSizeMM + widthMM;
 		const bleedHeightMM = 2 * bleedSizeMM + heightMM;
@@ -49,9 +50,25 @@ export async function applyUserSettings(page: PDFPage, settings: UserSettings) {
 
 export function getEmbedSizeAndPosition(embedFile: PDFEmbeddedPage | PDFImage, page: PDFPage) {
 	const { fit } = get(userSettings);
-	const pageSize = page.getSize();
-	const trimSize = page.getTrimBox();
+	let pageSize = page.getSize();
+	let trimSize = page.getTrimBox();
 	const embedAspectRatio = embedFile.width / embedFile.height;
+
+	if (needsRotation(page, embedFile, get(userSettings))) {
+		page.setWidth(pageSize.height);
+		page.setHeight(pageSize.width);
+
+		pageSize = page.getSize();
+		trimSize = page.getTrimBox();
+	}
+
+	if (!pageSize.width) pageSize.width = trimSize.height * embedAspectRatio;
+	if (!pageSize.height) pageSize.height = trimSize.width / embedAspectRatio;
+	
+	page.setSize(pageSize.width, pageSize.height);
+	page.setTrimBox(trimSize.x, trimSize.y, trimSize.width, trimSize.height);
+	pageSize = page.getSize();
+	trimSize = page.getTrimBox();
 
 	const width = fit
 		? Math.max(trimSize.width, trimSize.height * embedAspectRatio)

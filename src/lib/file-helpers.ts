@@ -1,5 +1,5 @@
 import type { UserSettings } from '@/lib/types';
-import { PDFDocument } from 'pdf-lib';
+import { degrees, PDFDocument, PDFEmbeddedPage, PDFImage, PDFPage } from 'pdf-lib';
 import { FILE_TYPE } from '@/lib/constants';
 import { addCropMarks } from '@/lib/crop-marks';
 import { closeCropMask, cropMask } from '@/lib/pdf-extend';
@@ -43,6 +43,13 @@ export async function pushFilesToStore(files: FileList) {
 	});
 }
 
+export function needsRotation(page: PDFPage, file: PDFEmbeddedPage | PDFImage, settings: UserSettings) {
+	const trimSize = page.getTrimBox();
+	const pageAspectRatio = trimSize.width / trimSize.height;
+	const embedAspectRatio = file.width / file.height;
+	return settings.autoRotate && ((embedAspectRatio > 1 && pageAspectRatio < 1) || (embedAspectRatio < 1 && pageAspectRatio > 1));
+}
+
 export const fileHandlers = {
 	async [FILE_TYPE.PDF](pdfDoc: PDFDocument, file: ArrayBuffer, settings: UserSettings) {
 		const existingPdfDoc = await PDFDocument.load(file);
@@ -51,20 +58,24 @@ export const fileHandlers = {
 		embedPages.forEach(async (embedPage) => {
 			const page = pdfDoc.addPage();
 			await applyUserSettings(page, settings);
-			const embedSizeAndPosition = getEmbedSizeAndPosition(embedPage, page);
 
 			if (settings.cropMarksAndBleed) {
 				const bleedBox = page.getBleedBox();
 				cropMask(page, bleedBox);
 			}
 
+			const embedSizeAndPosition = getEmbedSizeAndPosition(embedPage, page);
 			page.drawPage(embedPage, embedSizeAndPosition);
+			const rotate = needsRotation(page, embedPage, settings);
+
 			if (settings.mirrorBleed) applyMirroBleed(embedPage, page);
 
 			if (settings.cropMarksAndBleed) {
 				closeCropMask(page);
 				addCropMarks(page);
 			}
+
+			if (rotate) page.setRotation(degrees(90));
 		});
 	},
 
@@ -72,39 +83,47 @@ export const fileHandlers = {
 		const image = await pdfDoc.embedJpg(file);
 		const page = pdfDoc.addPage();
 		await applyUserSettings(page, settings);
-		const embedSizeAndPosition = getEmbedSizeAndPosition(image, page);
 
 		if (settings.cropMarksAndBleed) {
 			const bleedBox = page.getBleedBox();
 			cropMask(page, bleedBox);
 		}
 
+		const embedSizeAndPosition = getEmbedSizeAndPosition(image, page);
 		page.drawImage(image, embedSizeAndPosition);
+		const rotate = needsRotation(page, image, settings);
+
 		if (settings.mirrorBleed) applyMirroBleed(image, page);
 
 		if (settings.cropMarksAndBleed) {
 			closeCropMask(page);
 			addCropMarks(page);
 		}
+
+		if (rotate) page.setRotation(degrees(90));
 	},
 
 	async [FILE_TYPE.PNG](pdfDoc: PDFDocument, file: ArrayBuffer, settings: UserSettings) {
 		const image = await pdfDoc.embedPng(file);
 		const page = pdfDoc.addPage();
 		await applyUserSettings(page, settings);
-		const embedSizeAndPosition = getEmbedSizeAndPosition(image, page);
 
 		if (settings.cropMarksAndBleed) {
 			const bleedBox = page.getBleedBox();
 			cropMask(page, bleedBox);
 		}
 
+		const embedSizeAndPosition = getEmbedSizeAndPosition(image, page);
 		page.drawImage(image, embedSizeAndPosition);
+		const rotate = needsRotation(page, image, settings);
+
 		if (settings.mirrorBleed) applyMirroBleed(image, page);
 
 		if (settings.cropMarksAndBleed) {
 			closeCropMask(page);
 			addCropMarks(page);
 		}
+
+		if (rotate) page.setRotation(degrees(90));
 	}
 };

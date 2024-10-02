@@ -5,7 +5,7 @@ import { userSettings, userFiles, previewBlobUri } from '@/lib/stores';
 import { fileHandlers } from '@/lib/file-helpers';
 
 export function generateTitle(settings: UserSettings) {
-	return `${settings.document.width} × ${settings.document.height} mm`;
+	return `${settings.document.width || "Prop"} × ${settings.document.height || "Prop"} mm`;
 }
 
 export async function generatePDF() {
@@ -25,26 +25,6 @@ export async function generatePDF() {
 			await fileHandlers[fileType](pdfDoc, fileBuffer, settings);
 		}
 	}
-
-	/* if (settings.repeat) {
-		const pdfBytes = await pdfDoc.save();
-		const existingPdfDoc = await PDFDocument.load(pdfBytes);
-		const embedPages = await pdfDoc.embedPages(existingPdfDoc.getPages());
-		const { width, height } = settings.artboard;
-		const widthMM = width * MM_TO_POINTS;
-		const heightMM = height * MM_TO_POINTS;
-
-		const repeatPage = pdfDoc.addPage([widthMM, heightMM]);
-
-		for (let i = 0; i < settings.repeatX * settings.repeatY; i++) {
-			embedPages.forEach(async (embedPage) => {
-				repeatPage.drawPage(embedPage, {
-					x: 0,
-					y: 0
-				});
-			});
-		}
-	} */
 
 	const pdfBytes = await pdfDoc.save();
 	const pdfBlob = new Blob([pdfBytes], { type: 'application/pdf', });
