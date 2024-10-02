@@ -1,8 +1,12 @@
+import type { UserSettings } from '@/lib/types';
 import { PDFDocument } from 'pdf-lib';
 import { get } from 'svelte/store';
 import { userSettings, userFiles, previewBlobUri } from '@/lib/stores';
-import { fileHandlers } from './file-helpers';
-import { MM_TO_POINTS } from './constants';
+import { fileHandlers } from '@/lib/file-helpers';
+
+export function generateTitle(settings: UserSettings) {
+	return `${settings.document.width} × ${settings.document.height} mm`;
+}
 
 export async function generatePDF() {
 	const settings = get(userSettings);
@@ -11,6 +15,8 @@ export async function generatePDF() {
 	if (files.length === 0) return;
 
 	const pdfDoc = await PDFDocument.create();
+	pdfDoc.setTitle(generateTitle(settings));
+	pdfDoc.setAuthor('Bleed');
 
 	for (const file of files) {
 		const { fileType, fileBuffer } = file;
@@ -20,7 +26,7 @@ export async function generatePDF() {
 		}
 	}
 
-	if (settings.repeat) {
+	/* if (settings.repeat) {
 		const pdfBytes = await pdfDoc.save();
 		const existingPdfDoc = await PDFDocument.load(pdfBytes);
 		const embedPages = await pdfDoc.embedPages(existingPdfDoc.getPages());
@@ -38,10 +44,10 @@ export async function generatePDF() {
 				});
 			});
 		}
-	}
+	} */
 
 	const pdfBytes = await pdfDoc.save();
-	const pdfBlob = new Blob([pdfBytes], { type: 'application/pdf' });
+	const pdfBlob = new Blob([pdfBytes], { type: 'application/pdf', });
 	const blobUri = URL.createObjectURL(pdfBlob);
 
 	previewBlobUri.set(blobUri);

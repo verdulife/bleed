@@ -10,16 +10,16 @@ export const userSettings: Writable<UserSettings> = writable({
 		width: 85,
 		height: 54
 	},
-	fit: 0,
-	autoRotate: 0,
-	cropMarksAndBleed: 1,
+	fit: 1,
+	autoRotate: 1,
+	cropMarksAndBleed: 0,
 	bleedSize: 3,
 	mirrorBleed: 0,
-	repeat: 0,
+	/* repeat: 0,
 	repeatX: 1,
 	repeatY: 1,
 	gapX: 3,
-	gapY: 3
+	gapY: 3 */
 });
 
 export const userFiles: Writable<Array<UserFile>> = writable([]);

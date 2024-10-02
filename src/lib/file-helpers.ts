@@ -1,10 +1,10 @@
-import type { UserSettings } from './types';
+import type { UserSettings } from '@/lib/types';
 import { PDFDocument } from 'pdf-lib';
-import { FILE_TYPE } from './constants';
-import { addCropMarks } from './crop-marks';
-import { closeCropMask, cropMask } from './pdf-extend';
-import { applyUserSettings, getEmbedSizeAndPosition, applyMirroBleed } from './settings-helpers';
-import { userFiles } from './stores';
+import { FILE_TYPE } from '@/lib/constants';
+import { addCropMarks } from '@/lib/crop-marks';
+import { closeCropMask, cropMask } from '@/lib/pdf-extend';
+import { applyUserSettings, getEmbedSizeAndPosition, applyMirroBleed } from '@/lib/settings-helpers';
+import { userFiles } from '@/lib/stores';
 
 export function getFileURL(file: File) {
 	return URL.createObjectURL(file);
@@ -12,13 +12,8 @@ export function getFileURL(file: File) {
 
 export function getFileType(file: File) {
 	const fileType = file.type.split('/')[1];
-	switch (fileType) {
-		case 'jpeg':
-		case 'png':
-			return fileType;
-		default:
-			return 'pdf';
-	}
+	if (fileType === 'pdf') return 'pdf';
+	else return fileType;
 }
 
 export async function inputFileAsync(): Promise<FileList> {

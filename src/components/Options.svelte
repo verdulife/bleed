@@ -1,12 +1,13 @@
 <script>
 	import { userSettings } from '@/lib/stores';
-	import OptionBox from './OptionBox.svelte';
-	import InputSizes from './InputSizes.svelte';
-	import InputSize from './InputSize.svelte';
-	import InputCheck from './InputCheck.svelte';
+
+	import OptionBox from '@/components/OptionBox.svelte';
+	import InputSizes from '@/components/InputSizes.svelte';
+	import InputSize from '@/components/InputSize.svelte';
+	import InputCheck from '@/components/InputCheck.svelte';
 	import InputFile from '@/components/InputFile.svelte';
-	import ButtonGenerate from './ButtonGenerate.svelte';
-	import Logo from './Logo.svelte';
+	import ButtonGenerate from '@/components/ButtonGenerate.svelte';
+	import Logo from '@/components/Logo.svelte';
 
 	$: if ($userSettings.cropMarksAndBleed === 0) $userSettings.mirrorBleed = 0;
 </script>
@@ -29,7 +30,7 @@
 		{/if}
 	</OptionBox>
 
-	<OptionBox>
+	<!-- <OptionBox>
 		<InputCheck bind:setting={$userSettings.repeat}>Repeat document</InputCheck>
 		{#if $userSettings.repeat}
 			<InputSizes bind:setting={$userSettings.artboard}>Artboard size</InputSizes>
@@ -38,7 +39,7 @@
 			<InputSize bind:setting={$userSettings.gapX}>Horizontal gap</InputSize>
 			<InputSize bind:setting={$userSettings.gapY}>Vetical gap</InputSize>
 		{/if}
-	</OptionBox>
+	</OptionBox> -->
 
 	<OptionBox>
 		<InputFile />

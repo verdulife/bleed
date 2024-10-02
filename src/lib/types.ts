@@ -12,11 +12,11 @@ export type UserSettings = {
 	cropMarksAndBleed: 0 | 1;
 	bleedSize: number;
 	mirrorBleed: 0 | 1;
-	repeat: 0 | 1;
+	/* repeat: 0 | 1;
 	repeatX: number;
 	repeatY: number;
 	gapX: number;
-	gapY: number;
+	gapY: number; */
 };
 
 export type UserFile = {
