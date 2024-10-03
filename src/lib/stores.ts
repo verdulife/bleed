@@ -3,8 +3,8 @@ import type { UserFile, UserSettings } from './types';
 
 export const userSettings: Writable<UserSettings> = writable({
 	document: {
-		width: 85,
-		height: 54
+		width: 0,
+		height: 0
 	},
 	fit: 1,
 	autoRotate: 1,

@@ -20,9 +20,19 @@ async function getSizeWithCropMarks(sizeMM: DocSize) {
 	return { width, height };
 }
 
-export async function applyUserSettings(page: PDFPage, settings: UserSettings) {
+export async function applyUserSettings(page: PDFPage, settings: UserSettings, embedFile: PDFEmbeddedPage | PDFImage) {
 	const { document, bleedSize, cropMarksAndBleed } = settings;
-	const { width, height } = document;
+	const embedAspectRatio = embedFile.width / embedFile.height;
+	let { width, height } = document;
+
+	if (!width && !height) {
+		width = embedFile.width;
+		height = embedFile.height;
+	};
+
+	if (!width) width = embedFile.height * embedAspectRatio;
+	if (!height) height = embedFile.width * embedAspectRatio;
+
 	const widthMM = width * MM_TO_POINTS;
 	const heightMM = height * MM_TO_POINTS;
 
@@ -64,7 +74,7 @@ export function getEmbedSizeAndPosition(embedFile: PDFEmbeddedPage | PDFImage, p
 
 	if (!pageSize.width) pageSize.width = trimSize.height * embedAspectRatio;
 	if (!pageSize.height) pageSize.height = trimSize.width / embedAspectRatio;
-	
+
 	page.setSize(pageSize.width, pageSize.height);
 	page.setTrimBox(trimSize.x, trimSize.y, trimSize.width, trimSize.height);
 	pageSize = page.getSize();

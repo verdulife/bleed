@@ -57,7 +57,7 @@ export const fileHandlers = {
 
 		embedPages.forEach(async (embedPage) => {
 			const page = pdfDoc.addPage();
-			await applyUserSettings(page, settings);
+			await applyUserSettings(page, settings, embedPage);
 
 			if (settings.cropMarksAndBleed) {
 				const bleedBox = page.getBleedBox();
@@ -82,7 +82,7 @@ export const fileHandlers = {
 	async [FILE_TYPE.JPEG](pdfDoc: PDFDocument, file: ArrayBuffer, settings: UserSettings) {
 		const image = await pdfDoc.embedJpg(file);
 		const page = pdfDoc.addPage();
-		await applyUserSettings(page, settings);
+		await applyUserSettings(page, settings, image);
 
 		if (settings.cropMarksAndBleed) {
 			const bleedBox = page.getBleedBox();
@@ -106,7 +106,7 @@ export const fileHandlers = {
 	async [FILE_TYPE.PNG](pdfDoc: PDFDocument, file: ArrayBuffer, settings: UserSettings) {
 		const image = await pdfDoc.embedPng(file);
 		const page = pdfDoc.addPage();
-		await applyUserSettings(page, settings);
+		await applyUserSettings(page, settings, image);
 
 		if (settings.cropMarksAndBleed) {
 			const bleedBox = page.getBleedBox();

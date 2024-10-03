@@ -7,6 +7,7 @@
 	import InputFile from '@/components/InputFile.svelte';
 	import ButtonGenerate from '@/components/ButtonGenerate.svelte';
 	import Logo from '@/components/Logo.svelte';
+	import SelectPresets from './SelectPresets.svelte';
 
 	$: if ($userSettings.cropMarksAndBleed === 0) $userSettings.mirrorBleed = 0;
 </script>
@@ -17,7 +18,12 @@
 	</span>
 
 	<OptionBox>
+		<InputFile />
+	</OptionBox>
+
+	<OptionBox>
 		<InputSizes bind:setting={$userSettings.document}>Document size</InputSizes>
+		<SelectPresets bind:setting={$userSettings.document}>Presets</SelectPresets>
 		<InputCheck bind:setting={$userSettings.fit}>Crop to fit</InputCheck>
 		<InputCheck bind:setting={$userSettings.autoRotate}>Autorotate</InputCheck>
 	</OptionBox>
@@ -39,10 +45,6 @@
 			<InputSize bind:setting={$userSettings.gapY}>Vetical gap</InputSize>
 		{/if}
 	</OptionBox> -->
-
-	<OptionBox>
-		<InputFile />
-	</OptionBox>
 
 	<span class="sticky bottom-4 mt-6">
 		<ButtonGenerate />
