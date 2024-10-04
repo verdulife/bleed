@@ -30,8 +30,8 @@ export async function applyUserSettings(page: PDFPage, settings: UserSettings, e
 		height = embedFile.height;
 	};
 
-	if (!width) width = embedFile.height * embedAspectRatio;
-	if (!height) height = embedFile.width * embedAspectRatio;
+	if (!width) width = document.height * embedAspectRatio;
+	if (!height) height = document.width / embedAspectRatio;
 
 	const widthMM = width * MM_TO_POINTS;
 	const heightMM = height * MM_TO_POINTS;
