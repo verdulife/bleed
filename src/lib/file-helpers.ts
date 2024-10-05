@@ -1,7 +1,10 @@
+import type { PDFEmbedOptions } from '@/lib/types';
 import { degrees, PDFDocument, PDFEmbeddedPage, PDFImage, PDFPage } from 'pdf-lib';
+import { get } from 'svelte/store';
 import { CROPLINE, FILE_TYPE, isJPEG, isPNG, POINTS_TO_MM, toPT } from '@/lib/constants';
 import { userFiles, userSettings } from '@/lib/stores';
-import { get } from 'svelte/store';
+import { drawMirrorBleed } from '@/lib/settings-helpers';
+import { addCropMarks } from './crop-marks';
 
 function readBufferHeader(file: File, start = 0, end = 8): Promise<ArrayBuffer> {
 	return new Promise((resolve, reject) => {
@@ -87,22 +90,22 @@ function setDocument(embedFile: PDFEmbeddedPage | PDFImage, page: PDFPage) {
 		mediaBoxSize = {
 			x: 0,
 			y: 0,
-			width: toPT(CROPLINE.DISTANCE * 2 + userWidthMM),
-			height: toPT(CROPLINE.DISTANCE * 2 + userHeightMM)
+			width: toPT(CROPLINE.DISTANCE) * 2 + toPT(userWidthMM),
+			height: toPT(CROPLINE.DISTANCE) * 2 + toPT(userHeightMM)
 		}
 
 		bleedBoxSize = {
-			x: cropMarkSizeMM,
-			y: cropMarkSizeMM,
-			width: bleedSizeMM * 2 + mediaBoxSize.width,
-			height: bleedSizeMM * 2 + mediaBoxSize.height
+			x: toPT(cropMarkSizeMM),
+			y: toPT(cropMarkSizeMM),
+			width: mediaBoxSize.width - toPT(bleedSizeMM) * 2,
+			height: mediaBoxSize.height - toPT(bleedSizeMM) * 2
 		}
 
 		trimBoxSize = {
 			x: toPT(bleedSizeMM + cropMarkSizeMM),
 			y: toPT(bleedSizeMM + cropMarkSizeMM),
-			width: toPT(mediaBoxSize.width - bleedSizeMM * 2 - cropMarkSizeMM * 2),
-			height: toPT(mediaBoxSize.height - bleedSizeMM * 2 - cropMarkSizeMM * 2)
+			width: mediaBoxSize.width - toPT(bleedSizeMM) * 2 - toPT(cropMarkSizeMM) * 2,
+			height: mediaBoxSize.height - toPT(bleedSizeMM) * 2 - toPT(cropMarkSizeMM) * 2
 		}
 	}
 
@@ -125,35 +128,39 @@ function setDocument(embedFile: PDFEmbeddedPage | PDFImage, page: PDFPage) {
 		trimBoxSize.height
 	);
 	page.setSize(mediaBoxSize.width, mediaBoxSize.height);
+
+	console.log({ media: page.getMediaBox(), bleed: page.getBleedBox(), trim: page.getTrimBox() });
+
 }
 
 function setEmbed(embedFile: PDFEmbeddedPage | PDFImage, page: PDFPage) {
 	const { fit, autoRotate } = get(userSettings);
 	const mediaBoxSize = page.getMediaBox();
+	const trimBoxSize = page.getTrimBox();
 	const embedRatio = embedFile.width / embedFile.height;
 
-	let rotate = degrees(0);
-	let width = Math.min(mediaBoxSize.width, mediaBoxSize.height * embedRatio);
-	let height = Math.min(mediaBoxSize.height, mediaBoxSize.width / embedRatio);
+	let width = Math.min(trimBoxSize.width, trimBoxSize.height * embedRatio);
+	let height = Math.min(trimBoxSize.height, trimBoxSize.width / embedRatio);
 	let x = (mediaBoxSize.width - width) / 2;
 	let y = (mediaBoxSize.height - height) / 2;
+	let rotate = degrees(0);
 
 	if (fit) {
-		width = Math.max(mediaBoxSize.width, mediaBoxSize.height * embedRatio);
-		height = Math.max(mediaBoxSize.height, mediaBoxSize.width / embedRatio);
+		width = Math.max(trimBoxSize.width, trimBoxSize.height * embedRatio);
+		height = Math.max(trimBoxSize.height, trimBoxSize.width / embedRatio);
 		x = (mediaBoxSize.width - width) / 2;
 		y = (mediaBoxSize.height - height) / 2;
 	}
 
 	if (autoRotate && needsRotation(embedFile, page)) {
-		width = Math.min(mediaBoxSize.height, mediaBoxSize.width * embedRatio);
-		height = Math.min(mediaBoxSize.width, mediaBoxSize.height / embedRatio);
+		width = Math.min(trimBoxSize.height, trimBoxSize.width * embedRatio);
+		height = Math.min(trimBoxSize.width, trimBoxSize.height / embedRatio);
 		x = (mediaBoxSize.width + height) / 2;
 		y = (mediaBoxSize.height - width) / 2;
 
 		if (fit) {
-			width = Math.max(mediaBoxSize.height, mediaBoxSize.width * embedRatio);
-			height = Math.max(mediaBoxSize.width, mediaBoxSize.height / embedRatio);
+			width = Math.max(trimBoxSize.height, trimBoxSize.width * embedRatio);
+			height = Math.max(trimBoxSize.width, trimBoxSize.height / embedRatio);
 			x = (mediaBoxSize.width + height) / 2;
 			y = (mediaBoxSize.height - width) / 2;
 		}
@@ -162,6 +169,25 @@ function setEmbed(embedFile: PDFEmbeddedPage | PDFImage, page: PDFPage) {
 	}
 
 	return { x, y, width, height, rotate };
+}
+
+function draw(embedFile: PDFEmbeddedPage | PDFImage, page: PDFPage, embedOptions: PDFEmbedOptions) {
+	const { cropMarksAndBleed, mirrorBleed } = get(userSettings);
+	const isPdf = embedFile.constructor.name.toLowerCase().includes('page');
+
+	if (isPdf) {
+		page.drawPage(embedFile as PDFEmbeddedPage, embedOptions);
+	} else {
+		page.drawImage(embedFile as PDFImage, embedOptions);
+	}
+
+	if (cropMarksAndBleed) {
+		if (mirrorBleed) {
+			drawMirrorBleed(page, embedFile, embedOptions);
+		}
+
+		addCropMarks(page);
+	}
 }
 
 export const fileHandler = {
@@ -173,29 +199,27 @@ export const fileHandler = {
 			const page = pdfDoc.addPage();
 
 			setDocument(embedFile, page);
-			const embedProps = setEmbed(embedFile, page);
-			page.drawPage(embedFile, embedProps);
-
-			/* await applyUserSettings(page, settings, embedPage);
-	
-			if (settings.cropMarksAndBleed) {
-				const bleedBox = page.getBleedBox();
-				cropMask(page, bleedBox);
-			}
-	
-			const embedSizeAndPosition = getEmbedSizeAndPosition(embedPage, page);
-			page.drawPage(embedPage, embedSizeAndPosition);
-			const rotate = needsRotation(page, embedPage, settings);
-	
-			if (settings.mirrorBleed) applyMirroBleed(embedPage, page);
-	
-			if (settings.cropMarksAndBleed) {
-				closeCropMask(page);
-				addCropMarks(page);
-			}
-	
-			if (rotate) page.setRotation(degrees(90)); */
+			const embedOptions = setEmbed(embedFile, page);
+			draw(embedFile, page, embedOptions);
 		});
+	},
+
+	async [FILE_TYPE.JPEG](pdfDoc: PDFDocument, file: ArrayBuffer) {
+		const embedFile = await pdfDoc.embedJpg(file);
+		const page = pdfDoc.addPage();
+
+		setDocument(embedFile, page);
+		const embedProps = setEmbed(embedFile, page);
+		draw(embedFile, page, embedProps);
+	},
+
+	async [FILE_TYPE.PNG](pdfDoc: PDFDocument, file: ArrayBuffer) {
+		const embedFile = await pdfDoc.embedPng(file);
+		const page = pdfDoc.addPage();
+
+		setDocument(embedFile, page);
+		const embedProps = setEmbed(embedFile, page);
+		draw(embedFile, page, embedProps);
 	},
 
 	/* async [FILE_TYPE.JPEG](pdfDoc: PDFDocument, file: ArrayBuffer, settings: UserSettings) {
@@ -220,7 +244,7 @@ export const fileHandler = {
 		}
 
 		if (rotate) page.setRotation(degrees(90));
-	},
+	},*/
 
 	async [FILE_TYPE.PNG](pdfDoc: PDFDocument, file: ArrayBuffer, settings: UserSettings) {
 		const image = await pdfDoc.embedPng(file);
@@ -244,5 +268,5 @@ export const fileHandler = {
 		}
 
 		if (rotate) page.setRotation(degrees(90));
-	} */
+	}
 };
