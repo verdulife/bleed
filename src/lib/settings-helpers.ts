@@ -59,12 +59,12 @@ export async function applyUserSettings(page: PDFPage, settings: UserSettings, e
 }
 
 export function getEmbedSizeAndPosition(embedFile: PDFEmbeddedPage | PDFImage, page: PDFPage) {
-	const { fit } = get(userSettings);
+	const settings = get(userSettings);
 	let pageSize = page.getSize();
 	let trimSize = page.getTrimBox();
 	const embedAspectRatio = embedFile.width / embedFile.height;
 
-	if (needsRotation(page, embedFile, get(userSettings))) {
+	if (needsRotation(page, embedFile, settings)) {
 		page.setWidth(pageSize.height);
 		page.setHeight(pageSize.width);
 
@@ -80,10 +80,10 @@ export function getEmbedSizeAndPosition(embedFile: PDFEmbeddedPage | PDFImage, p
 	pageSize = page.getSize();
 	trimSize = page.getTrimBox();
 
-	const width = fit
+	const width = settings.fit
 		? Math.max(trimSize.width, trimSize.height * embedAspectRatio)
 		: Math.min(trimSize.width, trimSize.height * embedAspectRatio);
-	const height = fit
+	const height = settings.fit
 		? Math.max(trimSize.height, trimSize.width / embedAspectRatio)
 		: Math.min(trimSize.height, trimSize.width / embedAspectRatio);
 

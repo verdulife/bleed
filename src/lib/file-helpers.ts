@@ -23,8 +23,6 @@ export function getFileURL(file: File) {
 
 export async function getFileType(file: File) {
 	const buffers = await readBufferHeader(file);
-	if (!buffers) return;
-
 	const uint8Array = new Uint8Array(buffers);
 	let fileExt = "pdf";
 
