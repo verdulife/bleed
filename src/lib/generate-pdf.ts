@@ -18,6 +18,7 @@ export async function generatePDF() {
 	pdfDoc.setTitle(generateTitle(settings));
 	pdfDoc.setAuthor('Bleed');
 
+
 	for (const file of files) {
 		const { fileType, fileBuffer } = file;
 
@@ -26,9 +27,12 @@ export async function generatePDF() {
 		}
 	}
 
-	const pdfBytes = await pdfDoc.save();
-	const pdfBlob = new Blob([pdfBytes], { type: 'application/pdf', });
-	const blobUri = URL.createObjectURL(pdfBlob);
-
-	previewBlobUri.set(blobUri);
+	try {
+		const pdfBytes = await pdfDoc.save();
+		const pdfBlob = new Blob([pdfBytes], { type: 'application/pdf', });
+		const blobUri = URL.createObjectURL(pdfBlob);
+		previewBlobUri.set(blobUri);
+	} catch (error) {
+		alert('Error generating PDF');
+	}
 }

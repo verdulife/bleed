@@ -1,19 +1,37 @@
 import type { UserSettings } from '@/lib/types';
 import { degrees, PDFDocument, PDFEmbeddedPage, PDFImage, PDFPage } from 'pdf-lib';
-import { FILE_TYPE } from '@/lib/constants';
+import { FILE_TYPE, isJPEG, isPNG } from '@/lib/constants';
 import { addCropMarks } from '@/lib/crop-marks';
 import { closeCropMask, cropMask } from '@/lib/pdf-extend';
 import { applyUserSettings, getEmbedSizeAndPosition, applyMirroBleed } from '@/lib/settings-helpers';
 import { userFiles } from '@/lib/stores';
 
+function readBufferHeader(file: File, start = 0, end = 8): Promise<ArrayBuffer> {
+	return new Promise((resolve, reject) => {
+		const reader = new FileReader();
+		reader.onload = () => {
+			resolve(reader.result as ArrayBuffer);
+		};
+		reader.onerror = reject;
+		reader.readAsArrayBuffer(file.slice(start, end));
+	});
+}
+
 export function getFileURL(file: File) {
 	return URL.createObjectURL(file);
 }
 
-export function getFileType(file: File) {
-	const fileType = file.type.split('/')[1];
-	if (fileType === 'pdf') return 'pdf';
-	else return fileType;
+export async function getFileType(file: File) {
+	const buffers = await readBufferHeader(file);
+	if (!buffers) return;
+
+	const uint8Array = new Uint8Array(buffers);
+	let fileExt = "pdf";
+
+	if (isPNG(uint8Array)) fileExt = 'png';
+	if (isJPEG(uint8Array)) fileExt = 'jpeg';
+
+	return fileExt;
 }
 
 export async function inputFileAsync(): Promise<FileList> {
@@ -32,7 +50,7 @@ export async function inputFileAsync(): Promise<FileList> {
 
 export async function pushFilesToStore(files: FileList) {
 	Array.from(files).forEach(async (file: File) => {
-		const fileType = getFileType(file);
+		const fileType = await getFileType(file);
 		const fileBuffer = await file.arrayBuffer();
 		const fileName = file.name;
 

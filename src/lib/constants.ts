@@ -55,3 +55,13 @@ export const SIZE_PRESETS = {
 		height: 85
 	}
 };
+
+function checkFileHeader(headers: number[]) {
+	return (buffers: Uint8Array, options = { offset: 0 }) =>
+		headers.every(
+			(header, index) => header === buffers[options.offset + index]
+		);
+}
+
+export const isPNG = checkFileHeader([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+export const isJPEG = checkFileHeader([0xff, 0xd8, 0xff]);
