@@ -7,7 +7,7 @@ import type {
 	PDFPageDrawImageOptions
 } from 'pdf-lib';
 import { get } from 'svelte/store';
-import { CROPLINE, MM_TO_POINTS } from '@/lib/constants';
+import { CROPLINE, MM_TO_POINTS, POINTS_TO_MM } from '@/lib/constants';
 import { userSettings } from '@/lib/stores';
 import { needsRotation } from './file-helpers';
 
@@ -26,8 +26,8 @@ export async function applyUserSettings(page: PDFPage, settings: UserSettings, e
 	let { width, height } = document;
 
 	if (!width && !height) {
-		width = embedFile.width;
-		height = embedFile.height;
+		width = embedFile.width * POINTS_TO_MM;
+		height = embedFile.height * POINTS_TO_MM;
 	};
 
 	if (!width) width = document.height * embedAspectRatio;
