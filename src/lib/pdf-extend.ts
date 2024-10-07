@@ -8,19 +8,22 @@ import {
 	clip,
 	endPath,
 } from 'pdf-lib';
-import type { PDFCropBox } from './types';
 
-export function cropMask(page: PDFPage, cropBox: PDFCropBox) {
+export function openCropMask(page: PDFPage) {
+	const bleedBoxSize = page.getBleedBox();
+
 	page.pushOperators(
 		pushGraphicsState(),
-		moveTo(cropBox.x, cropBox.y),
-		lineTo(cropBox.x + cropBox.width, cropBox.y),
-		lineTo(cropBox.x + cropBox.width, cropBox.y + cropBox.height),
-		lineTo(cropBox.x, cropBox.y + cropBox.height),
+		moveTo(bleedBoxSize.x, bleedBoxSize.y),
+		lineTo(bleedBoxSize.x + bleedBoxSize.width, bleedBoxSize.y),
+		lineTo(bleedBoxSize.x + bleedBoxSize.width, bleedBoxSize.y + bleedBoxSize.height),
+		lineTo(bleedBoxSize.x, bleedBoxSize.y + bleedBoxSize.height),
 		closePath(),
 		clip(),
 		endPath()
 	);
+}
 
+export function closeCropMask(page: PDFPage) {
 	page.pushOperators(popGraphicsState());
 }

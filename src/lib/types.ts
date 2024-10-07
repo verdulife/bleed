@@ -36,5 +36,4 @@ export type PDFEmbedOptions = {
 	y: number;
 	width: number;
 	height: number;
-	rotate: Degrees;
 };
