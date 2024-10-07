@@ -2,7 +2,7 @@ import type { UserSettings } from '@/lib/types';
 import { PDFDocument } from 'pdf-lib';
 import { get } from 'svelte/store';
 import { userSettings, userFiles, previewBlobUri } from '@/lib/stores';
-import { fileHandlers } from '@/lib/file-helpers';
+import { fileHandler } from '@/lib/file-helpers';
 
 export function generateTitle(settings: UserSettings) {
 	return `${settings.document.width || "Prop"} × ${settings.document.height || "Prop"} mm`;
@@ -21,10 +21,7 @@ export async function generatePDF() {
 
 	for (const file of files) {
 		const { fileType, fileBuffer } = file;
-
-		if (fileHandlers[fileType]) {
-			await fileHandlers[fileType](pdfDoc, fileBuffer, settings);
-		}
+		await fileHandler[fileType](pdfDoc, fileBuffer);
 	}
 
 	try {

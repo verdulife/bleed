@@ -1,3 +1,5 @@
+import type { Degrees } from "pdf-lib";
+
 export type UserSettings = {
 	document: {
 		width: number;
@@ -23,6 +25,13 @@ export type DocSize = {
 };
 
 export type PDFCropBox = {
+	x: number;
+	y: number;
+	width: number;
+	height: number;
+};
+
+export type PDFEmbedOptions = {
 	x: number;
 	y: number;
 	width: number;

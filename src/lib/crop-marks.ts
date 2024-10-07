@@ -1,5 +1,5 @@
 import { type PDFPage, cmyk } from 'pdf-lib';
-import { CROPLINE, MM_TO_POINTS } from './constants';
+import { CROPLINE, MM_TO_POINTS } from '@/lib/constants';
 
 export function addCropMarks(page: PDFPage) {
 	const width = page.getWidth();
