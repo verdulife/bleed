@@ -11,7 +11,7 @@ import { CROPLINE, MM_TO_POINTS, POINTS_TO_MM } from '@/lib/constants';
 import { userSettings } from '@/lib/stores';
 import { needsRotation } from './file-helpers';
 
-async function getSizeWithCropMarks(sizeMM: DocSize) {
+/* function getSizeWithCropMarks(sizeMM: DocSize) {
 	const { width: widthMM, height: heightMM } = sizeMM;
 	const cropSizeMM = CROPLINE.DISTANCE * MM_TO_POINTS;
 	const width = 2 * cropSizeMM + widthMM;
@@ -56,7 +56,7 @@ export async function applyUserSettings(page: PDFPage, settings: UserSettings, e
 	}
 
 	page.setSize(mediaWidthMM, mediaHeightMM);
-}
+} */
 
 export function getEmbedSizeAndPosition(embedFile: PDFEmbeddedPage | PDFImage, page: PDFPage) {
 	const settings = get(userSettings);
