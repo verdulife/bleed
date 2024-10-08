@@ -8,14 +8,20 @@
 	import ButtonGenerate from '@/components/ButtonGenerate.svelte';
 	import Logo from '@/components/Logo.svelte';
 	import SelectPresets from '@/components/SelectPresets.svelte';
+	import Tabs from '@/components/Tabs.svelte';
 
 	$: if ($userSettings.cropMarksAndBleed === 0) $userSettings.mirrorBleed = 0;
+	$: currentTab = 'bleeder';
 </script>
 
 <main class="flex w-full flex-col gap-2">
 	<span class="mb-6">
 		<Logo></Logo>
 	</span>
+
+	<OptionBox>
+		<Tabs bind:tab={currentTab} />
+	</OptionBox>
 
 	<OptionBox>
 		<InputFile />
