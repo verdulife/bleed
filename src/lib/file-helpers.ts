@@ -4,7 +4,7 @@ import { get } from 'svelte/store';
 import { CROPLINE, FILE_TYPE, isJPEG, isPNG, POINTS_TO_MM, toPT } from '@/lib/constants';
 import { userFiles, userSettings } from '@/lib/stores';
 import { drawMirrorBleed } from '@/lib/settings-helpers';
-import { addCropMarks } from './crop-marks';
+import { addCropMarks } from '@/lib/crop-marks';
 import { closeCropMask, openCropMask } from './pdf-extend';
 
 export function getFileURL(file: File) {

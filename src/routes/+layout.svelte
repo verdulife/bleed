@@ -1,5 +1,5 @@
 <script lang="ts">
-	import '../app.pcss';
+	import '@/app.pcss';
 	import DropFile from '@/components/DropFile.svelte';
 	import Options from '@/components/Options.svelte';
 </script>

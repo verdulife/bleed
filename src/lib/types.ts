@@ -1,5 +1,3 @@
-import type { Degrees } from "pdf-lib";
-
 export type UserSettings = {
 	document: {
 		width: number;

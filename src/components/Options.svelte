@@ -7,7 +7,7 @@
 	import InputFile from '@/components/InputFile.svelte';
 	import ButtonGenerate from '@/components/ButtonGenerate.svelte';
 	import Logo from '@/components/Logo.svelte';
-	import SelectPresets from './SelectPresets.svelte';
+	import SelectPresets from '@/components/SelectPresets.svelte';
 
 	$: if ($userSettings.cropMarksAndBleed === 0) $userSettings.mirrorBleed = 0;
 </script>
