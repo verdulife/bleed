@@ -13,8 +13,8 @@
 	const [name] = fileName.split('.');
 </script>
 
-<li class="p-2 border-b last:border-b-0 border-slate-900 w-full">
-	<article class="relative flex items-center justify-start gap-2 w-full overflow-hidden text-left">
+<li class="w-full border-b border-slate-900 p-2 last:border-b-0">
+	<article class="relative flex w-full items-center justify-start gap-2 overflow-hidden text-left">
 		<button class=" text-gray-500">
 			{#if fileType === FILE_TYPE.JPEG}
 				<Jpg />
@@ -26,12 +26,15 @@
 		</button>
 
 		<p
-			class="font-semibold text-xs text-gray-400 whitespace-nowrap text-ellipsis overflow-hidden max-w-[150px]"
+			class="max-w-[150px] overflow-hidden text-ellipsis whitespace-nowrap text-xs font-semibold text-gray-400"
 		>
 			{name}
 		</p>
 
-		<button on:click={() => removeFile(id)} class=" text-gray-600 ml-auto">
+		<button
+			on:click={() => removeFile(id)}
+			class="ml-auto text-gray-600 transition-colors hover:text-red-500/80"
+		>
 			<Trash />
 		</button>
 	</article>
