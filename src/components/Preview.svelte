@@ -6,7 +6,7 @@
 	data={$previewBlobUri}
 	type="application/pdf"
 	title="Preview PDF"
-	class="flex h-full w-full flex-col items-center justify-center gap-4 rounded-xl bg-slate-900"
+	class="flex size-full flex-col items-center justify-center gap-4 rounded-xl bg-slate-900"
 >
 	<p class="text-center text-2xl font-semibold">An error occurred <br />creating the PDF</p>
 	<a

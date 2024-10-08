@@ -5,12 +5,12 @@
 </script>
 
 <DropFile>
-	<main class="flex flex-col-reverse lg:flex-row h-screen">
-		<section class="w-full lg:w-1/5 lg:min-w-[300px] h-1/4 lg:h-full overflow-y-scroll scrollbar-none">
+	<main class="flex h-dvh">
+		<section class="h-full w-80 overflow-y-scroll py-6 pl-6 scrollbar-none">
 			<Options />
 		</section>
 
-		<section class="grow h-3/4 lg:h-full p-4">
+		<section class="col-auto h-full flex-1 p-6">
 			<slot />
 		</section>
 	</main>

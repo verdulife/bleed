@@ -8,7 +8,7 @@
 </script>
 
 <ul
-	class="flex flex-col max-h-48 overflow-y-auto overflow-x-hidden w-full scrollbar-thin scrollbar-thumb-slate-900 scrollbar-thumb-rounded-full"
+	class="flex max-h-48 w-full flex-col overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-track-transparent scrollbar-thumb-gray-800"
 >
 	{#key $userFiles}
 		{#each $userFiles as file}

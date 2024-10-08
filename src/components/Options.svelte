@@ -12,7 +12,7 @@
 	$: if ($userSettings.cropMarksAndBleed === 0) $userSettings.mirrorBleed = 0;
 </script>
 
-<main class="flex flex-col gap-2 p-6">
+<main class="flex w-full flex-col gap-2">
 	<span class="mb-6">
 		<Logo></Logo>
 	</span>
