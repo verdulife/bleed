@@ -167,29 +167,13 @@ function setEmbed(embedFile: PDFEmbeddedPage | PDFImage, page: PDFPage) {
 	return { x, y, width, height };
 }
 
-function drawPdf(embedFile: PDFEmbeddedPage, page: PDFPage, embedOptions: PDFEmbedOptions) {
+function draw(type: "pdf" | "image", embedFile: PDFEmbeddedPage | PDFImage, page: PDFPage, embedOptions: PDFEmbedOptions) {
 	const { cropMarksAndBleed, mirrorBleed } = get(userSettings);
 
 	if (cropMarksAndBleed) openCropMask(page);
 
-	page.drawPage(embedFile as PDFEmbeddedPage, embedOptions);
-
-	if (cropMarksAndBleed) {
-		if (mirrorBleed) {
-			drawMirrorBleed(page, embedFile, embedOptions);
-		}
-
-		closeCropMask(page);
-		addCropMarks(page);
-	}
-}
-
-function drawImage(embedFile: PDFImage, page: PDFPage, embedOptions: PDFEmbedOptions) {
-	const { cropMarksAndBleed, mirrorBleed } = get(userSettings);
-
-	if (cropMarksAndBleed) openCropMask(page);
-
-	page.drawImage(embedFile as PDFImage, embedOptions);
+	if (type === "pdf") page.drawPage(embedFile as PDFEmbeddedPage, embedOptions);
+	else page.drawImage(embedFile as PDFImage, embedOptions);
 
 	if (cropMarksAndBleed) {
 		if (mirrorBleed) {
@@ -211,7 +195,7 @@ export const fileHandler = {
 
 			setDocument(embedFile, page);
 			const embedOptions = setEmbed(embedFile, page);
-			drawPdf(embedFile, page, embedOptions);
+			draw("pdf", embedFile, page, embedOptions);
 		});
 	},
 
@@ -221,7 +205,7 @@ export const fileHandler = {
 
 		const rotate = setDocument(embedFile, page);
 		const embedOptions = setEmbed(embedFile, page);
-		drawImage(embedFile, page, embedOptions);
+		draw("image", embedFile, page, embedOptions);
 
 		if (rotate) page.setRotation(degrees(-90));
 	},
@@ -232,6 +216,6 @@ export const fileHandler = {
 
 		setDocument(embedFile, page);
 		const embedOptions = setEmbed(embedFile, page);
-		drawImage(embedFile, page, embedOptions);
+		draw("image", embedFile, page, embedOptions);
 	}
 };
