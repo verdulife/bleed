@@ -1,7 +1,7 @@
 import type { PDFEmbedOptions } from '@/lib/types';
 import { degrees, PDFDocument, PDFEmbeddedPage, PDFImage, PDFPage } from 'pdf-lib';
 import { get } from 'svelte/store';
-import { CROPLINE, FILE_TYPE, isJPEG, isPNG, POINTS_TO_MM, toPT } from '@/lib/constants';
+import { CROPLINE, FILE_TYPE, isJPEG, isPNG, PDF_TYPE, POINTS_TO_MM, toPT } from '@/lib/constants';
 import { userFiles, userSettings } from '@/lib/stores';
 import { drawMirrorBleed } from '@/lib/settings-helpers';
 import { addCropMarks } from '@/lib/crop-marks';
@@ -167,13 +167,16 @@ function setEmbed(embedFile: PDFEmbeddedPage | PDFImage, page: PDFPage) {
 	return { x, y, width, height };
 }
 
+function isPdf(embedFile: PDFEmbeddedPage | PDFImage) {
+	return embedFile.constructor.name === PDF_TYPE;
+}
+
 function draw(embedFile: PDFEmbeddedPage | PDFImage, page: PDFPage, embedOptions: PDFEmbedOptions) {
 	const { cropMarksAndBleed, mirrorBleed } = get(userSettings);
-	const isPdf = embedFile.constructor.name.toLowerCase().includes('page');
 
 	if (cropMarksAndBleed) openCropMask(page);
 
-	if (isPdf) {
+	if (isPdf(embedFile)) {
 		page.drawPage(embedFile as PDFEmbeddedPage, embedOptions);
 	} else {
 		page.drawImage(embedFile as PDFImage, embedOptions);
@@ -197,7 +200,6 @@ export const fileHandler = {
 		embedPages.forEach(async (embedFile) => {
 			const page = pdfDoc.addPage();
 
-
 			setDocument(embedFile, page);
 			const embedOptions = setEmbed(embedFile, page);
 			draw(embedFile, page, embedOptions);
@@ -209,8 +211,8 @@ export const fileHandler = {
 		const page = pdfDoc.addPage();
 
 		const rotate = setDocument(embedFile, page);
-		const embedProps = setEmbed(embedFile, page);
-		draw(embedFile, page, embedProps);
+		const embedOptions = setEmbed(embedFile, page);
+		draw(embedFile, page, embedOptions);
 
 		if (rotate) page.setRotation(degrees(-90));
 	},
@@ -219,9 +221,8 @@ export const fileHandler = {
 		const embedFile = await pdfDoc.embedPng(file);
 		const page = pdfDoc.addPage();
 
-
 		setDocument(embedFile, page);
-		const embedProps = setEmbed(embedFile, page);
-		draw(embedFile, page, embedProps);
+		const embedOptions = setEmbed(embedFile, page);
+		draw(embedFile, page, embedOptions);
 	}
 };
