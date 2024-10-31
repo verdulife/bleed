@@ -176,7 +176,7 @@ function draw(embedFile: PDFEmbeddedPage | PDFImage, page: PDFPage, embedOptions
 
 	if (cropMarksAndBleed) openCropMask(page);
 
-
+	console.log(embedFile);
 
 	if (isPdf(embedFile)) {
 		console.log("draw pdf");
