@@ -1,3 +1,5 @@
+import type { PDFEmbeddedPage } from 'pdf-lib';
+
 export type UserSettings = {
 	document: {
 		width: number;

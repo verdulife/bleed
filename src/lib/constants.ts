@@ -1,6 +1,5 @@
 export const MM_TO_POINTS = 2.83465;
 export const POINTS_TO_MM = 1 / MM_TO_POINTS;
-export const PDF_TYPE = "PDFEmbeddedPage2";
 
 export function toMM(PT: number) {
 	return PT * POINTS_TO_MM;
