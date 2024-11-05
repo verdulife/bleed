@@ -5,8 +5,11 @@
 	import FileList from '@/components/FileList.svelte';
 	import Trash from '@/icons/Trash.svelte';
 
+	export let onlyPdf = false;
+	const addFilesText = onlyPdf ? "Add PDF's" : "Add images or PDF's";
+
 	async function addFiles() {
-		const files = await inputFileAsync();
+		const files = await inputFileAsync(onlyPdf);
 		await pushFilesToStore(files);
 	}
 
@@ -20,7 +23,7 @@
 
 <fieldset class="flex w-full flex-col items-start gap-2">
 	<div class="flex w-full items-center justify-between text-xs font-semibold text-gray-400">
-		<h3>Add images or PDF's</h3>
+		<h3>{addFilesText}</h3>
 
 		{#if $userFiles.length}
 			<button

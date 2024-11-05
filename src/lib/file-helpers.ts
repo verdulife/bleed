@@ -1,8 +1,8 @@
-import type { PDFEmbedOptions } from '@/lib/types';
+import type { PDFOptions, RepeatSettings } from '@/lib/types';
 import { degrees, PDFDocument, PDFEmbeddedPage, PDFImage, PDFPage } from 'pdf-lib';
 import { get } from 'svelte/store';
 import { CROPLINE, FILE_TYPE, isJPEG, isPNG, POINTS_TO_MM, toPT } from '@/lib/constants';
-import { userFiles, userSettings } from '@/lib/stores';
+import { userFiles, bleedSettings, repeatSettings } from '@/lib/stores';
 import { drawMirrorBleed } from '@/lib/settings-helpers';
 import { addCropMarks } from '@/lib/crop-marks';
 import { closeCropMask, openCropMask } from './pdf-extend';
@@ -33,11 +33,11 @@ export async function getFileType(file: File) {
 	return fileExt;
 }
 
-export async function inputFileAsync(): Promise<FileList> {
+export async function inputFileAsync(onlyPdf = false): Promise<FileList> {
 	const input = document.createElement('input');
 	input.type = 'file';
 	input.multiple = true;
-	input.accept = 'application/pdf, image/jpeg, image/png';
+	input.accept = onlyPdf ? 'application/pdf' : 'application/pdf, image/jpeg, image/png';
 	input.click();
 
 	return new Promise((resolve) => {
@@ -69,7 +69,7 @@ export function needsRotation(embedFile: PDFEmbeddedPage | PDFImage, page: PDFPa
 }
 
 function setDocument(embedFile: PDFEmbeddedPage | PDFImage, page: PDFPage) {
-	const { document, cropMarksAndBleed, bleedSize: bleedSizeMM, autoRotate } = get(userSettings);
+	const { document, cropMarksAndBleed, bleedSize: bleedSizeMM, autoRotate } = get(bleedSettings);
 	const embedFileRatio = embedFile.width / embedFile.height;
 	let { width: userWidthMM, height: userHeightMM } = document;
 
@@ -147,7 +147,7 @@ function setDocument(embedFile: PDFEmbeddedPage | PDFImage, page: PDFPage) {
 }
 
 function setEmbed(embedFile: PDFEmbeddedPage | PDFImage, page: PDFPage) {
-	const { fit } = get(userSettings);
+	const { fit } = get(bleedSettings);
 	const mediaBoxSize = page.getMediaBox();
 	const trimBoxSize = page.getTrimBox();
 	const embedRatio = embedFile.width / embedFile.height;
@@ -167,8 +167,8 @@ function setEmbed(embedFile: PDFEmbeddedPage | PDFImage, page: PDFPage) {
 	return { x, y, width, height };
 }
 
-function drawPdf(embedFile: PDFEmbeddedPage, page: PDFPage, embedOptions: PDFEmbedOptions) {
-	const { cropMarksAndBleed, mirrorBleed } = get(userSettings);
+function drawPdf(embedFile: PDFEmbeddedPage, page: PDFPage, embedOptions: PDFOptions) {
+	const { cropMarksAndBleed, mirrorBleed } = get(bleedSettings);
 
 	if (cropMarksAndBleed) openCropMask(page);
 
@@ -184,8 +184,8 @@ function drawPdf(embedFile: PDFEmbeddedPage, page: PDFPage, embedOptions: PDFEmb
 	}
 }
 
-function drawImage(embedFile: PDFImage, page: PDFPage, embedOptions: PDFEmbedOptions) {
-	const { cropMarksAndBleed, mirrorBleed } = get(userSettings);
+function drawImage(embedFile: PDFImage, page: PDFPage, embedOptions: PDFOptions) {
+	const { cropMarksAndBleed, mirrorBleed } = get(bleedSettings);
 
 	if (cropMarksAndBleed) openCropMask(page);
 
@@ -235,3 +235,20 @@ export const fileHandler = {
 		drawImage(embedFile, page, embedOptions);
 	}
 };
+
+export async function fileRepeat(pdfDoc: PDFDocument, file: ArrayBuffer, page: PDFPage) {
+	const settings = get(repeatSettings);
+	const loadedFiles = await PDFDocument.load(file);
+	const embedPages = await pdfDoc.embedPages(loadedFiles.getPages());
+
+	embedPages.forEach(async (embedFile) => {
+		for (let x = 0; x < settings.repeatX; x++) {
+			for (let y = 0; y < settings.repeatY; y++) {
+				page.drawPage(embedFile as PDFEmbeddedPage, {
+					x: embedFile.width * x + settings.gapX, // todo calc to center on artboard
+					y: embedFile.height * y + settings.gapY
+				});
+			}
+		}
+	});
+}

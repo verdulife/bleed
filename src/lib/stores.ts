@@ -1,7 +1,7 @@
 import { type Writable, writable } from 'svelte/store';
-import type { UserFile, UserSettings } from '@/lib/types';
+import type { UserFile, BleedSettings, RepeatSettings } from '@/lib/types';
 
-export const userSettings: Writable<UserSettings> = writable({
+export const bleedSettings: Writable<BleedSettings> = writable({
 	document: {
 		width: 0,
 		height: 0
@@ -11,6 +11,17 @@ export const userSettings: Writable<UserSettings> = writable({
 	cropMarksAndBleed: 0,
 	bleedSize: 3,
 	mirrorBleed: 0
+});
+
+export const repeatSettings: Writable<RepeatSettings> = writable({
+	artboard: {
+		width: 0,
+		height: 0
+	},
+	repeatX: 1,
+	repeatY: 1,
+	gapX: 0,
+	gapY: 0
 });
 
 export const userFiles: Writable<Array<UserFile>> = writable([]);

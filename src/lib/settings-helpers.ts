@@ -5,9 +5,9 @@ import type {
 	PDFPageDrawPageOptions,
 	PDFPageDrawImageOptions
 } from 'pdf-lib';
-import type { PDFEmbedOptions } from '@/lib/types';
+import type { PDFOptions } from '@/lib/types';
 
-export function drawMirrorBleed(page: PDFPage, embedFile: PDFEmbeddedPage | PDFImage, embedOptions: PDFEmbedOptions) {
+export function drawMirrorBleed(page: PDFPage, embedFile: PDFEmbeddedPage | PDFImage, embedOptions: PDFOptions) {
 	const isPdf = embedFile.constructor.name.toLowerCase().includes('page');
 
 	function drawMirrorSide(options: PDFPageDrawPageOptions | PDFPageDrawImageOptions) {

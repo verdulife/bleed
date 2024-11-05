@@ -1,12 +1,12 @@
 <script>
-	import { userSettings } from '@/lib/stores';
+	import { bleedSettings } from '@/lib/stores';
 	import Switch from '@/icons/Switch.svelte';
 
 	function switchSizes() {
-		const { width, height } = $userSettings.document;
+		const { width, height } = $bleedSettings.document;
 
-		$userSettings.document.width = height;
-		$userSettings.document.height = width;
+		$bleedSettings.document.width = height;
+		$bleedSettings.document.height = width;
 	}
 </script>
 
@@ -24,7 +24,7 @@
 			<input
 				type="number"
 				id="width"
-				bind:value={$userSettings.document.width}
+				bind:value={$bleedSettings.document.width}
 				class=" p-2 w-full bg-transparent"
 			/>
 			<span class="p-2 bg-black/30 text-xs text-gray-400 grid place-content-center">mm</span>
@@ -34,7 +34,7 @@
 			<input
 				type="number"
 				id="height"
-				bind:value={$userSettings.document.height}
+				bind:value={$bleedSettings.document.height}
 				class=" p-2 w-full bg-transparent"
 			/>
 			<span class="p-2 bg-black/30 text-xs text-gray-400 grid place-content-center">mm</span>

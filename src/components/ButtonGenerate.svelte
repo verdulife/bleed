@@ -1,10 +1,17 @@
 <script>
-	import { generatePDF } from '@/lib/generate-pdf';
+	import { generatePDF, repeatPDF } from '@/lib/generate-pdf';
+
+	export let isRepeat = false;
+
+	function generate() {
+		if (isRepeat) repeatPDF();
+		else generatePDF();
+	}
 </script>
 
 <button
-	on:click={generatePDF}
-	class="w-full bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors"
+	on:click={generate}
+	class="w-full rounded bg-blue-500 px-4 py-2 text-white transition-colors hover:bg-blue-700"
 >
 	Process PDF
 </button>
