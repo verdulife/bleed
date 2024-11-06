@@ -18,6 +18,10 @@ export const repeatSettings: Writable<RepeatSettings> = writable({
 		width: 0,
 		height: 0
 	},
+	embed: {
+		width: 0,
+		height: 0
+	},
 	repeatX: 1,
 	repeatY: 1,
 	gapX: 0,

@@ -1,9 +1,10 @@
-import type { BleedSettings, RepeatSettings } from '@/lib/types';
+import type { BleedSettings, PDFOptions, RepeatSettings } from '@/lib/types';
 import { PDFDocument } from 'pdf-lib';
 import { get } from 'svelte/store';
 import { bleedSettings, userFiles, previewBlobUri, repeatSettings } from '@/lib/stores';
 import { fileHandler, fileRepeat } from '@/lib/file-helpers';
-import { toPT } from './constants';
+import { toPT } from '@/lib/constants';
+import { closeCropMask, openCropMask } from '@/lib/pdf-extend';
 
 export function generateTitle(settings: BleedSettings | RepeatSettings) {
 	if ('document' in settings) {
@@ -47,8 +48,10 @@ export async function repeatPDF() {
 
 	const pdfDoc = await PDFDocument.create();
 	const artboardSize: [number, number] = [toPT(settings.artboard.width), toPT(settings.artboard.height)];
+
 	pdfDoc.setTitle(generateTitle(settings));
 	pdfDoc.setAuthor('Bleed');
+
 	const page = pdfDoc.addPage(artboardSize);
 
 	for (const file of files) {

@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { previewBlobUri } from '@/lib/stores';
+	$: data = $previewBlobUri ? `${$previewBlobUri}#view=Fit` : '';
 </script>
 
 <object
-	data={$previewBlobUri}
+	{data}
 	type="application/pdf"
 	title="Preview PDF"
 	class="flex size-full flex-col items-center justify-center gap-4 rounded-xl bg-slate-900"

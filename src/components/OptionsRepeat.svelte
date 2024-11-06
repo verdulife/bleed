@@ -4,9 +4,9 @@
 	import OptionBox from '@/components/OptionBox.svelte';
 	import InputFile from '@/components/InputFile.svelte';
 	import InputSizes from '@/components/InputSizes.svelte';
-	import InputSize from '@/components/InputSize.svelte';
-	import ButtonGenerate from './ButtonGenerate.svelte';
-	import SelectPresets from './SelectPresets.svelte';
+	import ButtonGenerate from '@/components/ButtonGenerate.svelte';
+	import SelectPresets from '@/components/SelectPresets.svelte';
+	import InputAxis from '@/components/InputAxis.svelte';
 </script>
 
 <OptionBox>
@@ -16,13 +16,13 @@
 <OptionBox>
 	<InputSizes bind:setting={$repeatSettings.artboard}>Artboard size</InputSizes>
 	<SelectPresets bind:setting={$repeatSettings.artboard}>Presets</SelectPresets>
+	<InputSizes bind:setting={$repeatSettings.embed}>File size</InputSizes>
+	<SelectPresets bind:setting={$repeatSettings.embed}>Presets</SelectPresets>
 </OptionBox>
 
 <OptionBox>
-	<InputSize bind:setting={$repeatSettings.repeatX}>Repeat horizontaly</InputSize>
-	<InputSize bind:setting={$repeatSettings.repeatY}>Repeat verticaly</InputSize>
-	<InputSize bind:setting={$repeatSettings.gapX}>Horizontal gap</InputSize>
-	<InputSize bind:setting={$repeatSettings.gapY}>Vetical gap</InputSize>
+	<InputAxis bind:x={$repeatSettings.repeatX} bind:y={$repeatSettings.repeatY}>Repeat</InputAxis>
+	<InputAxis bind:x={$repeatSettings.gapX} bind:y={$repeatSettings.gapY}>Gap (mm)</InputAxis>
 </OptionBox>
 
 <span class="sticky bottom-4 mt-6">

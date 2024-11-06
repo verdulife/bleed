@@ -14,6 +14,7 @@ export type BleedSettings = {
 
 export type RepeatSettings = {
 	artboard: DocSize;
+	embed: DocSize;
 	repeatX: number;
 	repeatY: number;
 	gapX: number;

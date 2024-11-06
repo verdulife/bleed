@@ -5,7 +5,7 @@ import { CROPLINE, FILE_TYPE, isJPEG, isPNG, POINTS_TO_MM, toPT } from '@/lib/co
 import { userFiles, bleedSettings, repeatSettings } from '@/lib/stores';
 import { drawMirrorBleed } from '@/lib/settings-helpers';
 import { addCropMarks } from '@/lib/crop-marks';
-import { closeCropMask, openCropMask } from './pdf-extend';
+import { closeCropMask, closeMask, openCropMask, openMask } from './pdf-extend';
 
 export function getFileURL(file: File) {
 	return URL.createObjectURL(file);
@@ -236,6 +236,20 @@ export const fileHandler = {
 	}
 };
 
+function calcCenter(embedFile: PDFEmbeddedPage, page: PDFPage, settings: RepeatSettings, iterationX: number, iterationY: number) {
+	const { width: pageWidth, height: pageHeight } = page.getSize();
+	const { width: fileWidth, height: fileHeight } = embedFile;
+	const { repeatX, repeatY } = settings;
+	const repeatWidth = fileWidth * repeatX;
+	const repeatHeight = fileHeight * repeatY;
+	const centerX = pageWidth / 2 - repeatWidth / 2;
+	const centerY = pageHeight / 2 - repeatHeight / 2;
+	const posX = centerX + fileWidth * iterationX;
+	const posY = centerY + fileHeight * iterationY;
+
+	return { posX, posY };
+}
+
 export async function fileRepeat(pdfDoc: PDFDocument, file: ArrayBuffer, page: PDFPage) {
 	const settings = get(repeatSettings);
 	const loadedFiles = await PDFDocument.load(file);
@@ -244,10 +258,24 @@ export async function fileRepeat(pdfDoc: PDFDocument, file: ArrayBuffer, page: P
 	embedPages.forEach(async (embedFile) => {
 		for (let x = 0; x < settings.repeatX; x++) {
 			for (let y = 0; y < settings.repeatY; y++) {
-				page.drawPage(embedFile as PDFEmbeddedPage, {
-					x: embedFile.width * x + settings.gapX, // todo calc to center on artboard
-					y: embedFile.height * y + settings.gapY
-				});
+				const { posX, posY } = calcCenter(embedFile, page, settings, x, y);
+				const embedWidth = toPT(settings.embed.width);
+				const embedHeight = toPT(settings.embed.height);
+
+				if (settings.embed.width && settings.embed.height) {
+					const maskOptions: PDFOptions = {
+						x: posX + embedWidth / 2,
+						y: posY + embedHeight / 2,
+						width: embedWidth,
+						height: embedHeight
+					};
+
+					openMask(page, maskOptions);
+				}
+
+				page.drawPage(embedFile as PDFEmbeddedPage, { x: posX, y: posY });
+
+				if (settings.embed.width && settings.embed.height) closeMask(page);
 			}
 		}
 	});
