@@ -1,7 +1,7 @@
 import type { PDFOptions, RepeatSettings } from '@/lib/types';
 import { degrees, PDFDocument, PDFEmbeddedPage, PDFImage, PDFPage } from 'pdf-lib';
 import { get } from 'svelte/store';
-import { CROPLINE, FILE_TYPE, isJPEG, isPNG, POINTS_TO_MM, toPT } from '@/lib/constants';
+import { CROPLINE, FILE_TYPE, isJPEG, isPDF, isPNG, POINTS_TO_MM, toPT } from '@/lib/constants';
 import { userFiles, bleedSettings, repeatSettings } from '@/lib/stores';
 import { drawMirrorBleed } from '@/lib/settings-helpers';
 import { addCropMarks } from '@/lib/crop-marks';
@@ -25,12 +25,12 @@ export async function getFileType(file: File) {
 
 	const buffers = await readBufferHeader(file);
 	const uint8Array = new Uint8Array(buffers);
-	let fileExt = "pdf";
 
-	if (isPNG(uint8Array)) fileExt = 'png';
-	if (isJPEG(uint8Array)) fileExt = 'jpeg';
+	if (isPDF(uint8Array)) return FILE_TYPE.PDF;
+	if (isPNG(uint8Array)) return FILE_TYPE.PNG;
+	if (isJPEG(uint8Array)) return FILE_TYPE.JPEG;
 
-	return fileExt;
+	throw new Error('Unsupported file type');
 }
 
 export async function inputFileAsync(onlyPdf = false): Promise<FileList> {
@@ -48,20 +48,31 @@ export async function inputFileAsync(onlyPdf = false): Promise<FileList> {
 }
 
 export async function pushFilesToStore(files: FileList) {
-	Array.from(files).forEach(async (file: File) => {
-		const fileType = await getFileType(file);
-		const fileBuffer = await file.arrayBuffer();
-		const fileName = file.name;
+	const startIndex = get(userFiles).length;
+	const results = await Promise.allSettled(
+		Array.from(files).map(async (file, index) => {
+			const fileType = await getFileType(file);
+			const fileBuffer = await file.arrayBuffer();
+			return { fileType, fileBuffer, fileName: file.name, id: startIndex + index };
+		})
+	);
 
-		userFiles.update((store) => {
-			const id = store.length;
-			return (store = [...store, { fileType, fileBuffer, fileName, id }]);
-		});
+	const validFiles: Array<{ fileType: string; fileBuffer: ArrayBuffer; fileName: string; id: number }> = [];
+	results.forEach((result, index) => {
+		if (result.status === 'rejected') {
+			alert(`Error loading "${files[index].name}": ${(result.reason as Error).message}`);
+		} else {
+			validFiles.push(result.value);
+		}
 	});
+
+	userFiles.update((store) => [...store, ...validFiles]);
 }
 
 export function needsRotation(embedFile: PDFEmbeddedPage | PDFImage, page: PDFPage) {
 	const mediaBoxSize = page.getMediaBox();
+	if (!mediaBoxSize.height || !embedFile.height) return false;
+
 	const mediaBoxRatio = mediaBoxSize.width / mediaBoxSize.height;
 	const embedRatio = embedFile.width / embedFile.height;
 
@@ -111,8 +122,8 @@ function setDocument(embedFile: PDFEmbeddedPage | PDFImage, page: PDFPage) {
 		bleedBoxSize = {
 			x: toPT(cropMarkSizeMM),
 			y: toPT(cropMarkSizeMM),
-			width: mediaBoxSize.width - toPT(bleedSizeMM) * 2,
-			height: mediaBoxSize.height - toPT(bleedSizeMM) * 2
+			width: mediaBoxSize.width - toPT(cropMarkSizeMM) * 2,
+			height: mediaBoxSize.height - toPT(cropMarkSizeMM) * 2
 		}
 
 		trimBoxSize = {
@@ -150,16 +161,17 @@ function setEmbed(embedFile: PDFEmbeddedPage | PDFImage, page: PDFPage) {
 	const { fit } = get(bleedSettings);
 	const mediaBoxSize = page.getMediaBox();
 	const trimBoxSize = page.getTrimBox();
+	const safeTrimBox = trimBoxSize.width === 0 ? mediaBoxSize : trimBoxSize;
 	const embedRatio = embedFile.width / embedFile.height;
 
-	let width = Math.min(trimBoxSize.width, trimBoxSize.height * embedRatio);
-	let height = Math.min(trimBoxSize.height, trimBoxSize.width / embedRatio);
+	let width = Math.min(safeTrimBox.width, safeTrimBox.height * embedRatio);
+	let height = Math.min(safeTrimBox.height, safeTrimBox.width / embedRatio);
 	let x = (mediaBoxSize.width - width) / 2;
 	let y = (mediaBoxSize.height - height) / 2;
 
 	if (fit) {
-		width = Math.max(trimBoxSize.width, trimBoxSize.height * embedRatio);
-		height = Math.max(trimBoxSize.height, trimBoxSize.width / embedRatio);
+		width = Math.max(safeTrimBox.width, safeTrimBox.height * embedRatio);
+		height = Math.max(safeTrimBox.height, safeTrimBox.width / embedRatio);
 		x = (mediaBoxSize.width - width) / 2;
 		y = (mediaBoxSize.height - height) / 2;
 	}
@@ -203,16 +215,16 @@ function drawImage(embedFile: PDFImage, page: PDFPage, embedOptions: PDFOptions)
 
 export const fileHandler = {
 	async [FILE_TYPE.PDF](pdfDoc: PDFDocument, file: ArrayBuffer) {
-		const loadedFiles = await PDFDocument.load(file);
+		const loadedFiles = await PDFDocument.load(file, { ignoreEncryption: true });
 		const embedPages = await pdfDoc.embedPages(loadedFiles.getPages());
 
-		embedPages.forEach(async (embedFile) => {
+		for (const embedFile of embedPages) {
 			const page = pdfDoc.addPage();
 
 			setDocument(embedFile, page);
 			const embedOptions = setEmbed(embedFile, page);
 			drawPdf(embedFile, page, embedOptions);
-		});
+		}
 	},
 
 	async [FILE_TYPE.JPEG](pdfDoc: PDFDocument, file: ArrayBuffer) {
@@ -236,7 +248,7 @@ export const fileHandler = {
 	}
 };
 
-function calcCenter(embedFile: PDFEmbeddedPage, page: PDFPage, settings: RepeatSettings, iterationX: number, iterationY: number) {
+function calcCenter(embedFile: PDFEmbeddedPage | PDFImage, page: PDFPage, settings: RepeatSettings, iterationX: number, iterationY: number) {
 	const { width: pageWidth, height: pageHeight } = page.getSize();
 	const { width: fileWidth, height: fileHeight } = embedFile;
 	const { repeatX, repeatY } = settings;
@@ -250,12 +262,42 @@ function calcCenter(embedFile: PDFEmbeddedPage, page: PDFPage, settings: RepeatS
 	return { posX, posY };
 }
 
-export async function fileRepeat(pdfDoc: PDFDocument, file: ArrayBuffer, page: PDFPage) {
+export async function fileRepeat(pdfDoc: PDFDocument, file: ArrayBuffer, fileType: string, page: PDFPage) {
 	const settings = get(repeatSettings);
-	const loadedFiles = await PDFDocument.load(file);
-	const embedPages = await pdfDoc.embedPages(loadedFiles.getPages());
 
-	embedPages.forEach(async (embedFile) => {
+	if (fileType === FILE_TYPE.PDF) {
+		const loadedFiles = await PDFDocument.load(file, { ignoreEncryption: true });
+		const embedPages = await pdfDoc.embedPages(loadedFiles.getPages());
+
+		for (const embedFile of embedPages) {
+			for (let x = 0; x < settings.repeatX; x++) {
+				for (let y = 0; y < settings.repeatY; y++) {
+					const { posX, posY } = calcCenter(embedFile, page, settings, x, y);
+					const embedWidth = toPT(settings.embed.width);
+					const embedHeight = toPT(settings.embed.height);
+
+					if (settings.embed.width && settings.embed.height) {
+						const maskOptions: PDFOptions = {
+							x: posX + embedWidth / 2,
+							y: posY + embedHeight / 2,
+							width: embedWidth,
+							height: embedHeight
+						};
+
+						openMask(page, maskOptions);
+					}
+
+					page.drawPage(embedFile as PDFEmbeddedPage, { x: posX, y: posY });
+
+					if (settings.embed.width && settings.embed.height) closeMask(page);
+				}
+			}
+		}
+	} else {
+		const embedFile = fileType === FILE_TYPE.JPEG
+			? await pdfDoc.embedJpg(file)
+			: await pdfDoc.embedPng(file);
+
 		for (let x = 0; x < settings.repeatX; x++) {
 			for (let y = 0; y < settings.repeatY; y++) {
 				const { posX, posY } = calcCenter(embedFile, page, settings, x, y);
@@ -273,10 +315,10 @@ export async function fileRepeat(pdfDoc: PDFDocument, file: ArrayBuffer, page: P
 					openMask(page, maskOptions);
 				}
 
-				page.drawPage(embedFile as PDFEmbeddedPage, { x: posX, y: posY });
+				page.drawImage(embedFile, { x: posX, y: posY });
 
 				if (settings.embed.width && settings.embed.height) closeMask(page);
 			}
 		}
-	});
+	}
 }

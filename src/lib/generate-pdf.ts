@@ -26,8 +26,12 @@ export async function generatePDF() {
 
 
 	for (const file of files) {
-		const { fileType, fileBuffer } = file;
-		await fileHandler[fileType](pdfDoc, fileBuffer);
+		try {
+			const { fileType, fileBuffer } = file;
+			await fileHandler[fileType](pdfDoc, fileBuffer);
+		} catch (error) {
+			console.error(`Error processing "${file.fileName}":`, error);
+		}
 	}
 
 	try {
@@ -55,8 +59,12 @@ export async function repeatPDF() {
 	const page = pdfDoc.addPage(artboardSize);
 
 	for (const file of files) {
-		const { fileBuffer } = file;
-		await fileRepeat(pdfDoc, fileBuffer, page);
+		try {
+			const { fileType, fileBuffer } = file;
+			await fileRepeat(pdfDoc, fileBuffer, fileType, page);
+		} catch (error) {
+			console.error(`Error processing "${file.fileName}":`, error);
+		}
 	}
 
 	try {

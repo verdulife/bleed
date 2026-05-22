@@ -9,7 +9,7 @@ export const bleedSettings: Writable<BleedSettings> = writable({
 	fit: 1,
 	autoRotate: 1,
 	cropMarksAndBleed: 0,
-	bleedSize: 3,
+	bleedSize: 2,
 	mirrorBleed: 0
 });
 
