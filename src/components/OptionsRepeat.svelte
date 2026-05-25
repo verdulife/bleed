@@ -21,7 +21,6 @@
 </OptionBox>
 
 <OptionBox>
-	<InputAxis bind:x={$repeatSettings.repeatX} bind:y={$repeatSettings.repeatY}>Repeat</InputAxis>
 	<InputAxis bind:x={$repeatSettings.gapX} bind:y={$repeatSettings.gapY}>Gap (mm)</InputAxis>
 </OptionBox>
 

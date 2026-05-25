@@ -15,10 +15,17 @@ export type BleedSettings = {
 export type RepeatSettings = {
 	artboard: DocSize;
 	embed: DocSize;
-	repeatX: number;
-	repeatY: number;
 	gapX: number;
 	gapY: number;
+};
+
+export type GridResult = {
+	columns: number;
+	rows: number;
+	rotation: 0 | 90;
+	pagesNeeded: number;
+	elementWidth: number;
+	elementHeight: number;
 };
 
 export type UserFile = {

@@ -1,5 +1,5 @@
-import type { PDFOptions, RepeatSettings } from '@/lib/types';
-import { degrees, PDFDocument, PDFEmbeddedPage, PDFImage, PDFPage } from 'pdf-lib';
+import type { PDFOptions, RepeatSettings, GridResult } from '@/lib/types';
+import { degrees, PDFDocument, PDFEmbeddedPage, PDFImage, PDFPage, pushGraphicsState, popGraphicsState, moveTo, lineTo, closePath, clip, endPath } from 'pdf-lib';
 import { get } from 'svelte/store';
 import { CROPLINE, FILE_TYPE, isJPEG, isPDF, isPNG, POINTS_TO_MM, toPT } from '@/lib/constants';
 import { userFiles, bleedSettings, repeatSettings } from '@/lib/stores';
@@ -179,19 +179,33 @@ function setEmbed(embedFile: PDFEmbeddedPage | PDFImage, page: PDFPage) {
 	return { x, y, width, height };
 }
 
+export function embedFileOnPage(
+	embedFile: PDFEmbeddedPage | PDFImage,
+	page: PDFPage,
+	embedOptions: PDFOptions,
+	applyMirrorBleed: boolean
+) {
+	openCropMask(page);
+
+	if (embedFile.constructor.name.toLowerCase().includes('page')) {
+		page.drawPage(embedFile as PDFEmbeddedPage, embedOptions);
+	} else {
+		page.drawImage(embedFile as PDFImage, embedOptions);
+	}
+
+	if (applyMirrorBleed) {
+		drawMirrorBleed(page, embedFile, embedOptions);
+	}
+
+	closeCropMask(page);
+}
+
 function drawPdf(embedFile: PDFEmbeddedPage, page: PDFPage, embedOptions: PDFOptions) {
 	const { cropMarksAndBleed, mirrorBleed } = get(bleedSettings);
 
-	if (cropMarksAndBleed) openCropMask(page);
-
-	page.drawPage(embedFile as PDFEmbeddedPage, embedOptions);
+	embedFileOnPage(embedFile, page, embedOptions, !!mirrorBleed);
 
 	if (cropMarksAndBleed) {
-		if (mirrorBleed) {
-			drawMirrorBleed(page, embedFile, embedOptions);
-		}
-
-		closeCropMask(page);
 		addCropMarks(page);
 	}
 }
@@ -199,16 +213,9 @@ function drawPdf(embedFile: PDFEmbeddedPage, page: PDFPage, embedOptions: PDFOpt
 function drawImage(embedFile: PDFImage, page: PDFPage, embedOptions: PDFOptions) {
 	const { cropMarksAndBleed, mirrorBleed } = get(bleedSettings);
 
-	if (cropMarksAndBleed) openCropMask(page);
-
-	page.drawImage(embedFile as PDFImage, embedOptions);
+	embedFileOnPage(embedFile, page, embedOptions, !!mirrorBleed);
 
 	if (cropMarksAndBleed) {
-		if (mirrorBleed) {
-			drawMirrorBleed(page, embedFile, embedOptions);
-		}
-
-		closeCropMask(page);
 		addCropMarks(page);
 	}
 }
@@ -248,77 +255,221 @@ export const fileHandler = {
 	}
 };
 
-function calcCenter(embedFile: PDFEmbeddedPage | PDFImage, page: PDFPage, settings: RepeatSettings, iterationX: number, iterationY: number) {
-	const { width: pageWidth, height: pageHeight } = page.getSize();
-	const { width: fileWidth, height: fileHeight } = embedFile;
-	const { repeatX, repeatY } = settings;
-	const repeatWidth = fileWidth * repeatX;
-	const repeatHeight = fileHeight * repeatY;
-	const centerX = pageWidth / 2 - repeatWidth / 2;
-	const centerY = pageHeight / 2 - repeatHeight / 2;
-	const posX = centerX + fileWidth * iterationX;
-	const posY = centerY + fileHeight * iterationY;
+export const SAFETY_MARGIN_MM = 6;
 
-	return { posX, posY };
+export function calculateGrid(
+	artboardWidth: number,
+	artboardHeight: number,
+	elementWidth: number,
+	elementHeight: number,
+	gapX: number,
+	gapY: number,
+	totalElements: number
+): GridResult {
+	const usableWidth = artboardWidth - SAFETY_MARGIN_MM * 2;
+	const usableHeight = artboardHeight - SAFETY_MARGIN_MM * 2;
+
+	function countFit(available: number, itemSize: number, gap: number): number {
+		if (itemSize <= 0) return 0;
+		return Math.floor((available + gap) / (itemSize + gap));
+	}
+
+	const normalCols = countFit(usableWidth, elementWidth, gapX);
+	const normalRows = countFit(usableHeight, elementHeight, gapY);
+	const normalTotal = normalCols * normalRows;
+
+	const rotatedCols = countFit(usableWidth, elementHeight, gapY);
+	const rotatedRows = countFit(usableHeight, elementWidth, gapX);
+	const rotatedTotal = rotatedCols * rotatedRows;
+
+	const useRotation = rotatedTotal > normalTotal;
+
+	const columns = useRotation ? rotatedCols : normalCols;
+	const rows = useRotation ? rotatedRows : normalRows;
+	const rotation = useRotation ? 90 : 0;
+	const pagesNeeded = Math.max(1, Math.ceil(totalElements / (columns * rows)));
+
+	return {
+		columns: Math.max(0, columns),
+		rows: Math.max(0, rows),
+		rotation,
+		pagesNeeded,
+		elementWidth: useRotation ? elementHeight : elementWidth,
+		elementHeight: useRotation ? elementWidth : elementHeight
+	};
 }
 
 export async function fileRepeat(pdfDoc: PDFDocument, file: ArrayBuffer, fileType: string, page: PDFPage) {
+	// TODO: Replace with new grid-based layout (Step 4)
+	// Temporary: draw file once at center of page
 	const settings = get(repeatSettings);
+	const embedWidth = toPT(settings.embed.width || 50);
+	const embedHeight = toPT(settings.embed.height || 50);
+	const pageSize = page.getSize();
 
 	if (fileType === FILE_TYPE.PDF) {
 		const loadedFiles = await PDFDocument.load(file, { ignoreEncryption: true });
 		const embedPages = await pdfDoc.embedPages(loadedFiles.getPages());
-
 		for (const embedFile of embedPages) {
-			for (let x = 0; x < settings.repeatX; x++) {
-				for (let y = 0; y < settings.repeatY; y++) {
-					const { posX, posY } = calcCenter(embedFile, page, settings, x, y);
-					const embedWidth = toPT(settings.embed.width);
-					const embedHeight = toPT(settings.embed.height);
-
-					if (settings.embed.width && settings.embed.height) {
-						const maskOptions: PDFOptions = {
-							x: posX + embedWidth / 2,
-							y: posY + embedHeight / 2,
-							width: embedWidth,
-							height: embedHeight
-						};
-
-						openMask(page, maskOptions);
-					}
-
-					page.drawPage(embedFile as PDFEmbeddedPage, { x: posX, y: posY });
-
-					if (settings.embed.width && settings.embed.height) closeMask(page);
-				}
-			}
+			page.drawPage(embedFile, {
+				x: (pageSize.width - embedWidth) / 2,
+				y: (pageSize.height - embedHeight) / 2,
+				width: embedWidth,
+				height: embedHeight
+			});
 		}
 	} else {
 		const embedFile = fileType === FILE_TYPE.JPEG
 			? await pdfDoc.embedJpg(file)
 			: await pdfDoc.embedPng(file);
-
-		for (let x = 0; x < settings.repeatX; x++) {
-			for (let y = 0; y < settings.repeatY; y++) {
-				const { posX, posY } = calcCenter(embedFile, page, settings, x, y);
-				const embedWidth = toPT(settings.embed.width);
-				const embedHeight = toPT(settings.embed.height);
-
-				if (settings.embed.width && settings.embed.height) {
-					const maskOptions: PDFOptions = {
-						x: posX + embedWidth / 2,
-						y: posY + embedHeight / 2,
-						width: embedWidth,
-						height: embedHeight
-					};
-
-					openMask(page, maskOptions);
-				}
-
-				page.drawImage(embedFile, { x: posX, y: posY });
-
-				if (settings.embed.width && settings.embed.height) closeMask(page);
-			}
-		}
+		page.drawImage(embedFile, {
+			x: (pageSize.width - embedWidth) / 2,
+			y: (pageSize.height - embedHeight) / 2,
+			width: embedWidth,
+			height: embedHeight
+		});
 	}
+}
+
+export type ElementPosition = {
+	col: number;
+	row: number;
+	totalCols: number;
+	totalRows: number;
+};
+
+export function drawElement(
+	page: PDFPage,
+	embedFile: PDFEmbeddedPage | PDFImage,
+	position: ElementPosition,
+	elementWidthMM: number,
+	elementHeightMM: number,
+	gapXMM: number,
+	gapYMM: number,
+	bleedSizeMM: number,
+	rotation: 0 | 90,
+	artboardWidthMM: number,
+	artboardHeightMM: number
+) {
+	const { col, row, totalCols, totalRows } = position;
+	const safetyPt = toPT(SAFETY_MARGIN_MM);
+	const elementW = toPT(elementWidthMM);
+	const elementH = toPT(elementHeightMM);
+	const gapX = toPT(gapXMM);
+	const gapY = toPT(gapYMM);
+	const bleedSize = toPT(bleedSizeMM);
+
+	// Guard against invalid dimensions
+	if (!elementW || !elementH || !totalCols || !totalRows) {
+		return { cellX: 0, cellY: 0, cellW: elementW, cellH: elementH };
+	}
+
+	// Grid centering in artboard
+	const artboardW = Number(artboardWidthMM) || 210;
+	const artboardH = Number(artboardHeightMM) || 297;
+	const usableWidth = toPT(artboardW - SAFETY_MARGIN_MM * 2);
+	const usableHeight = toPT(artboardH - SAFETY_MARGIN_MM * 2);
+	const gridWidth = totalCols * elementW + (totalCols - 1) * gapX;
+	const gridHeight = totalRows * elementH + (totalRows - 1) * gapY;
+	const offsetX = Math.max(0, (usableWidth - gridWidth) / 2);
+	const offsetY = Math.max(0, (usableHeight - gridHeight) / 2);
+
+	const gridStartX = safetyPt + offsetX;
+	const gridStartY = safetyPt + offsetY;
+
+	const cellX = gridStartX + col * (elementW + gapX);
+	const cellY = gridStartY + row * (elementH + gapY);
+
+	// Adaptive clip per side
+	// Side with neighbor: clip = gap/2 from element edge
+	// Side free (border): clip = up to safety margin
+	const gapLeft = col > 0 ? gapX / 2 : cellX - safetyPt;
+	const gapRight = col < totalCols - 1 ? gapX / 2 : (safetyPt + usableWidth) - (cellX + elementW);
+	const gapBottom = row > 0 ? gapY / 2 : cellY - safetyPt;
+	const gapTop = row < totalRows - 1 ? gapY / 2 : (safetyPt + usableHeight) - (cellY + elementH);
+
+	// Clip between 0 (no bleed visible) and bleedSize (full bleed visible)
+	const clipLeft = Math.max(0, Math.min(gapLeft, bleedSize));
+	const clipRight = Math.max(0, Math.min(gapRight, bleedSize));
+	const clipBottom = Math.max(0, Math.min(gapBottom, bleedSize));
+	const clipTop = Math.max(0, Math.min(gapTop, bleedSize));
+
+	const clipX = cellX - clipLeft;
+	const clipY = cellY - clipBottom;
+	const clipW = elementW + clipLeft + clipRight;
+	const clipH = elementH + clipTop + clipBottom;
+
+	const isPdf = embedFile.constructor.name.toLowerCase().includes('page');
+
+	// Push graphics state + apply clip
+	page.pushOperators(pushGraphicsState());
+	page.pushOperators(
+		moveTo(clipX, clipY),
+		lineTo(clipX + clipW, clipY),
+		lineTo(clipX + clipW, clipY + clipH),
+		lineTo(clipX, clipY + clipH),
+		closePath(),
+		clip(),
+		endPath()
+	);
+
+	// Fit content to cell: scale to fill, crop overflow (no deformation)
+	const embedRatio = embedFile.width / embedFile.height;
+
+	// Guard against invalid embed dimensions
+	if (!embedFile.width || !embedFile.height || isNaN(embedRatio)) {
+		page.pushOperators(popGraphicsState());
+		return { cellX, cellY, cellW: elementW, cellH: elementH };
+	}
+
+	// When rotation=90, the effective cell dimensions swap
+	const fitW = rotation === 90 ? elementH : elementW;
+	const fitH = rotation === 90 ? elementW : elementH;
+
+	// Scale to fill the cell (larger dimension gets cropped)
+	const scaleToWidth = fitW / embedFile.width;
+	const scaleToHeight = fitH / embedFile.height;
+	const scale = Math.max(scaleToWidth, scaleToHeight);
+
+	const drawW = embedFile.width * scale;
+	const drawH = embedFile.height * scale;
+
+	// Center in cell
+	// When rotation=90, pdf-lib's transform maps:
+	//   (0,0)→(drawX,drawY), (0,drawH)→(drawX-drawH,drawY)
+	// So visual x-range is [drawX-drawH, drawX], visual width = drawH
+	// For visual center at cell center: drawX = cellX + (elementW + drawH)/2
+	const drawX = rotation === 90
+		? cellX + (elementW + drawH) / 2
+		: cellX + (elementW - drawW) / 2;
+	const drawY = rotation === 90
+		? cellY + (elementH - drawW) / 2
+		: cellY + (elementH - drawH) / 2;
+
+	const embedOptions: PDFOptions & { rotate?: any } = { x: drawX, y: drawY, width: drawW, height: drawH };
+
+	if (rotation === 90) {
+		embedOptions.rotate = degrees(90);
+	}
+
+	if (isPdf) {
+		page.drawPage(embedFile as PDFEmbeddedPage, embedOptions);
+	} else {
+		page.drawImage(embedFile as PDFImage, embedOptions);
+	}
+
+	// Mirror bleed
+	const { mirrorBleed } = get(bleedSettings);
+	if (mirrorBleed) {
+		drawMirrorBleed(page, embedFile, {
+			x: cellX,
+			y: cellY,
+			width: elementW,
+			height: elementH
+		});
+	}
+
+	page.pushOperators(popGraphicsState());
+
+	return { cellX, cellY, cellW: elementW, cellH: elementH };
 }
