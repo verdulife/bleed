@@ -47,13 +47,25 @@ export async function inputFileAsync(): Promise<FileList> {
 	});
 }
 
+/**
+ * Monotonic id source for every file pushed into the store. Ids must stay unique for
+ * the whole session: they are used as `{#each ... (file.id)}` keys, for removal by id,
+ * and they are handed to `svelte-dnd-action`, which requires unique item ids.
+ * A positional id (`get(userFiles).length + index`) is wrong because the store shrinks
+ * when a file is removed, so the next add reuses an id that is already in use.
+ */
+let nextFileId = 0;
+
 export async function pushFilesToStore(files: FileList) {
-	const startIndex = get(userFiles).length;
 	const results = await Promise.allSettled(
-		Array.from(files).map(async (file, index) => {
+		Array.from(files).map(async (file) => {
+			// The id is reserved synchronously, before the first `await`: the map callbacks
+			// run concurrently under `Promise.allSettled`, so reading the counter after an
+			// await could not follow the incoming array order.
+			const id = nextFileId++;
 			const fileType = await getFileType(file);
 			const fileBuffer = await file.arrayBuffer();
-			return { fileType, fileBuffer, fileName: file.name, id: startIndex + index };
+			return { fileType, fileBuffer, fileName: file.name, id };
 		})
 	);
 
