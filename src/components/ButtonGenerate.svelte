@@ -1,11 +1,8 @@
 <script>
-	import { generatePDF, repeatPDF } from '@/lib/generate-pdf';
-
-	export let isRepeat = false;
+	import { generatePDF } from '@/lib/generate-pdf';
 
 	function generate() {
-		if (isRepeat) repeatPDF();
-		else generatePDF();
+		generatePDF();
 	}
 </script>
 

@@ -12,22 +12,6 @@ export type BleedSettings = {
 	mirrorBleed: 0 | 1;
 };
 
-export type RepeatSettings = {
-	artboard: DocSize;
-	embed: DocSize;
-	gapX: number;
-	gapY: number;
-};
-
-export type GridResult = {
-	columns: number;
-	rows: number;
-	rotation: 0 | 90;
-	pagesNeeded: number;
-	elementWidth: number;
-	elementHeight: number;
-};
-
 export type UserFile = {
 	fileType: string;
 	fileBuffer: ArrayBuffer;
