@@ -10,3 +10,7 @@ node_modules
 .output
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# Process artifacts and tool caches (not part of the shipped app)
+/odd/
+/undefined/
