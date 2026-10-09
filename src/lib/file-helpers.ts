@@ -243,10 +243,18 @@ export function embedFileOnPage(
 ) {
 	openCropMask(page, clipBox);
 
-	if (embedFile.constructor.name.toLowerCase().includes('page')) {
-		page.drawPage(embedFile as PDFEmbeddedPage, embedOptions);
+	// The branch must be decided with `instanceof`, never by sniffing the embedded object's class
+	// name (`embedFile.constructor`, then its `name`, then `includes('page')`): the production
+	// minifier renames the pdf-lib classes, so such a sniff silently reports "not a page" in the
+	// deployed bundle while it passes locally. The page is then handed to `drawImage`, and pdf-lib
+	// throws "`image` must be of type `PDFImage`, but was actually of type `NaN`" (`NaN` because the
+	// message-only `getType` falls into its `isNaN(value)` branch for any non-primitive), which is
+	// the "works on localhost, fails on Vercel" pair. `instanceof` survives the rename and is the
+	// mechanism pdf-lib's own `isType` uses; only its error message reads a class name.
+	if (embedFile instanceof PDFEmbeddedPage) {
+		page.drawPage(embedFile, embedOptions);
 	} else {
-		page.drawImage(embedFile as PDFImage, embedOptions);
+		page.drawImage(embedFile, embedOptions);
 	}
 
 	if (applyMirrorBleed) {

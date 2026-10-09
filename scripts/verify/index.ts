@@ -19,6 +19,7 @@ import { getRenderInfoCases } from './render-info';
 import { getBlankTemplateCases } from './blank-template';
 import { getBleedModeCases } from './bleed-modes';
 import { getBleedSizeCases } from './bleed-size';
+import { getMinificationSafetyCases } from './minification-safety';
 
 const modules: Array<{ label: string; load: VerifyModule }> = [
 	{ label: 'file-ids', load: getFileIdsCases },
@@ -29,7 +30,8 @@ const modules: Array<{ label: string; load: VerifyModule }> = [
 	{ label: 'render-info', load: getRenderInfoCases },
 	{ label: 'blank-template', load: getBlankTemplateCases },
 	{ label: 'bleed-modes', load: getBleedModeCases },
-	{ label: 'bleed-size', load: getBleedSizeCases }
+	{ label: 'bleed-size', load: getBleedSizeCases },
+	{ label: 'minification-safety', load: getMinificationSafetyCases }
 ];
 
 async function main() {

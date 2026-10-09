@@ -1,18 +1,19 @@
+import { PDFEmbeddedPage } from 'pdf-lib';
 import type {
 	PDFPage,
 	PDFImage,
-	PDFEmbeddedPage,
 	PDFPageDrawPageOptions,
 	PDFPageDrawImageOptions
 } from 'pdf-lib';
 import type { PDFOptions } from '@/lib/types';
 
 export function drawMirrorBleed(page: PDFPage, embedFile: PDFEmbeddedPage | PDFImage, embedOptions: PDFOptions) {
-	const isPdf = embedFile.constructor.name.toLowerCase().includes('page');
-
 	function drawMirrorSide(options: PDFPageDrawPageOptions | PDFPageDrawImageOptions) {
-		if (isPdf) page.drawPage(embedFile as PDFEmbeddedPage, options);
-		else page.drawImage(embedFile as PDFImage, options);
+		// Same trap as `embedFileOnPage`: `instanceof` and not a class name, because the production
+		// minifier renames `PDFEmbeddedPage` and a name-based sniff would send an embedded page to
+		// `drawImage` in the deployed bundle only (see the comment in `file-helpers.ts`).
+		if (embedFile instanceof PDFEmbeddedPage) page.drawPage(embedFile, options);
+		else page.drawImage(embedFile, options);
 	}
 
 	//top-left
