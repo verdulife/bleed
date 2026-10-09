@@ -58,10 +58,12 @@ const DOCUMENT_WIDTH_MM = 100;
 const DOCUMENT_HEIGHT_MM = 150;
 
 /**
- * The only bleed size for which the current box math puts the trim box exactly on the
- * artwork (`CROPLINE.SIZE - CROPLINE.OVERLAY`). Deriving the fixture value from the
- * constants keeps the expectations below free of magic millimetres, and the value stays
- * correct when the box math is generalised (bleed size 3 is a fixed point of that change).
+ * The historical fixed point (`CROPLINE.SIZE - CROPLINE.OVERLAY`), kept as the fixture's
+ * bleed because it is a bleed below the mark distance. D3 was that the old box math only
+ * put the trim box on the artwork at this value; the v2 math
+ * (`computePageBoxes(art, art, margin, declaredBleed)`) is exact for every bleed size, so
+ * the value no longer carries the correctness of the expectations below - it is simply not
+ * the app default and not the mark distance.
  */
 const BLEED_SIZE_MM = CROPLINE.SIZE - CROPLINE.OVERLAY;
 
@@ -141,9 +143,9 @@ function assertBoxMM(actualPT: number, expectedMM: number, label: string) {
 }
 
 /**
- * With crop marks on, every output page - painted or blank - must carry the artwork
- * geometry: media box grown by the crop-mark distance, bleed box grown by the bleed size,
- * trim box on the artwork.
+ * With crop marks on and `bleedMode: 'none'`, every output page - painted or blank - must
+ * carry the artwork geometry: media box grown by the mark margin, trim box on the artwork,
+ * and a bleed box equal to the trim box.
  */
 function assertPageGeometry(
 	page: PDFPage,
@@ -160,10 +162,14 @@ function assertPageGeometry(
 	assertBoxMM(media.width, widthMM + 2 * CROPLINE.DISTANCE, `${label} media width`);
 	assertBoxMM(media.height, heightMM + 2 * CROPLINE.DISTANCE, `${label} media height`);
 
-	assertBoxMM(bleed.x, BLEED_SIZE_MM, `${label} bleed x`);
-	assertBoxMM(bleed.y, BLEED_SIZE_MM, `${label} bleed y`);
-	assertBoxMM(bleed.width, widthMM + 2 * BLEED_SIZE_MM, `${label} bleed width`);
-	assertBoxMM(bleed.height, heightMM + 2 * BLEED_SIZE_MM, `${label} bleed height`);
+	// v2 decision 3 moved this expectation: the bleed box used to be
+	// `art + 2 x BLEED_SIZE_MM`, because the pre-v2 contract declared a bleed in `none`
+	// mode too. `none` now declares **no** bleed, so the produced BleedBox equals the
+	// TrimBox: the artwork, still at the mark margin.
+	assertBoxMM(bleed.x, CROPLINE.DISTANCE, `${label} bleed x`);
+	assertBoxMM(bleed.y, CROPLINE.DISTANCE, `${label} bleed y`);
+	assertBoxMM(bleed.width, widthMM, `${label} bleed width`);
+	assertBoxMM(bleed.height, heightMM, `${label} bleed height`);
 
 	assertBoxMM(trim.x, CROPLINE.DISTANCE, `${label} trim x`);
 	assertBoxMM(trim.y, CROPLINE.DISTANCE, `${label} trim y`);

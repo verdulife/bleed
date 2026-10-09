@@ -1,18 +1,24 @@
 /**
- * Verification cases for defect D3 ("the prepress boxes are only correct when
- * `bleedSize === 3`").
+ * Verification cases for the pure page-box geometry (defect D3, then the v2 geometry).
  *
- * `addCropMarks` (`src/lib/crop-marks.ts`) draws every mark `CROPLINE.DISTANCE` away from
- * the media edge, so the trim line it marks is exactly `CROPLINE.DISTANCE` from that edge.
- * The output boxes must follow that same convention for every bleed size, not only for the
- * historical fixed point `CROPLINE.SIZE - CROPLINE.OVERLAY` (3 mm).
+ * `computePageBoxes` is the single source of truth for the three output boxes. Its
+ * signature is now `(artworkWidthMM, artworkHeightMM, marginMM, bleedMM)`: the **margin**
+ * per side is the caller's decision (`pageMarginMM` in `src/lib/bleed-mode.ts`) and the
+ * **bleed** is the amount the file declares (`declaredBleedMM`), which is 0 in `none` mode.
+ * The function no longer owns the `CROPLINE.DISTANCE` inset and no longer takes the old
+ * `withPageMargin` boolean.
  *
- * The first six cases are pure and drive `computePageBoxes` directly; every expected value
- * is derived from `CROPLINE.DISTANCE` and the bleed size, so there is no magic millimetre
- * in the expectations. The last case is the acceptance check the pure function cannot give
- * on its own: it runs the real `fileHandler[FILE_TYPE.PDF]` with crop marks on and the app
- * default bleed size, then reads the produced PDF back and asserts the boxes that were
- * actually serialized.
+ * The first seven cases are pure and drive `computePageBoxes` directly; every expected value
+ * is derived from `CROPLINE.DISTANCE` and the bleed size, so there is no magic millimetre in
+ * the expectations. The last case is the acceptance check the pure function cannot give on
+ * its own: it runs the real `fileHandler[FILE_TYPE.PDF]` and reads the produced PDF back to
+ * assert the boxes that were actually serialized.
+ *
+ * D3 ("the prepress boxes are only correct when `bleedSize === 3`") is the reason the pure
+ * cases exist at all: `addCropMarks` used to draw the trim line `CROPLINE.DISTANCE` from the
+ * media edge while the box math used `CROPLINE.SIZE - CROPLINE.OVERLAY`, so the boxes were
+ * only exact at the historical fixed point. The trim box must follow the mark distance for
+ * every bleed size.
  */
 import { CROPLINE, FILE_TYPE, toMM } from '@/lib/constants';
 import { PDFDocument } from 'pdf-lib';
@@ -28,9 +34,14 @@ const ARTWORK_WIDTH_MM = 210;
 const ARTWORK_HEIGHT_MM = 297;
 
 /**
+ * The margin a document with crop marks uses while the bleed is smaller than the mark
+ * distance: the trim line sits `CROPLINE.DISTANCE` from the media edge, which is what makes
+ * the marks land on the artwork.
+ */
+const CROP_MARK_MARGIN_MM = CROPLINE.DISTANCE;
+
+/**
  * The bleed size the app ships with (`src/lib/stores.ts`: `bleedSettings.bleedSize = 2`).
- * This is the case the defect reports: the default was changed away from 3, and the trim
- * box then left the artwork, so the default itself is the failing scenario.
  */
 const DEFAULT_BLEED_SIZE_MM = 2;
 
@@ -41,7 +52,7 @@ const DEFAULT_BLEED_SIZE_MM = 2;
  */
 const HISTORICAL_BLEED_SIZE_MM = CROPLINE.SIZE - CROPLINE.OVERLAY;
 
-/** Deliberately larger than `CROPLINE.DISTANCE`, to exercise the clamp. */
+/** Deliberately larger than the margin, to exercise the defensive clamp. */
 const OVERSIZED_BLEED_SIZE_MM = 15;
 
 /** Below zero: must be treated as no bleed at all, never as an inverted box. */
@@ -67,35 +78,32 @@ function expectedArtworkBox(): PageBox {
 	return { x: 0, y: 0, width: ARTWORK_WIDTH_MM, height: ARTWORK_HEIGHT_MM };
 }
 
-/** The media box: the artwork plus the crop-mark distance on every side. */
-function expectedMediaBox(): PageBox {
+/** The media box: the artwork plus the margin on every side. */
+function expectedMediaBox(marginMM = CROP_MARK_MARGIN_MM): PageBox {
 	return {
 		x: 0,
 		y: 0,
-		width: ARTWORK_WIDTH_MM + 2 * CROPLINE.DISTANCE,
-		height: ARTWORK_HEIGHT_MM + 2 * CROPLINE.DISTANCE
+		width: ARTWORK_WIDTH_MM + 2 * marginMM,
+		height: ARTWORK_HEIGHT_MM + 2 * marginMM
 	};
 }
 
-/**
- * The trim box: the media box inset by `CROPLINE.DISTANCE`, which is the artwork area,
- * so the crop marks drawn at that distance land exactly on the artwork edge.
- */
-function expectedTrimBox(): PageBox {
+/** The trim box: the media box inset by the margin, which is the artwork area. */
+function expectedTrimBox(marginMM = CROP_MARK_MARGIN_MM): PageBox {
 	return {
-		x: CROPLINE.DISTANCE,
-		y: CROPLINE.DISTANCE,
+		x: marginMM,
+		y: marginMM,
 		width: ARTWORK_WIDTH_MM,
 		height: ARTWORK_HEIGHT_MM
 	};
 }
 
 /**
- * The bleed box: the artwork grown by `bleedSizeMM` on every side (the bleed extends that
- * far past the trim line), placed inside the media box.
+ * The bleed box: the artwork grown by `bleedSizeMM` on every side (the declared bleed
+ * extends that far past the trim line), placed inside the media box.
  */
-function expectedBleedBox(bleedSizeMM: number): PageBox {
-	const insetMM = CROPLINE.DISTANCE - bleedSizeMM;
+function expectedBleedBox(bleedSizeMM: number, marginMM = CROP_MARK_MARGIN_MM): PageBox {
+	const insetMM = Math.max(0, marginMM - bleedSizeMM);
 	return {
 		x: insetMM,
 		y: insetMM,
@@ -139,11 +147,14 @@ export function getPageBoxesCases(): VerifyCase[] {
 		{
 			name: 'page-boxes: bleed size 2 (app default) keeps the trim box on the artwork',
 			run: () => {
+				// The case used to pass the old `withPageMargin: true` flag and let the
+				// function own the `CROPLINE.DISTANCE` inset; the margin is now an input, so
+				// the same geometry is expressed as a crop-mark margin plus the declared bleed.
 				const boxes = computePageBoxes(
 					ARTWORK_WIDTH_MM,
 					ARTWORK_HEIGHT_MM,
-					DEFAULT_BLEED_SIZE_MM,
-					true
+					CROP_MARK_MARGIN_MM,
+					DEFAULT_BLEED_SIZE_MM
 				);
 
 				assertBox(boxes.media, expectedMediaBox(), 'media box');
@@ -157,8 +168,8 @@ export function getPageBoxesCases(): VerifyCase[] {
 				const boxes = computePageBoxes(
 					ARTWORK_WIDTH_MM,
 					ARTWORK_HEIGHT_MM,
-					HISTORICAL_BLEED_SIZE_MM,
-					true
+					CROP_MARK_MARGIN_MM,
+					HISTORICAL_BLEED_SIZE_MM
 				);
 
 				assertBox(boxes.media, expectedMediaBox(), 'media box');
@@ -168,16 +179,43 @@ export function getPageBoxesCases(): VerifyCase[] {
 				// bleed, `bleedSize + that` for the trim) coincide with the correct geometry,
 				// which is why the defect was invisible while 3 mm was the default.
 				assertEqual(
-					CROPLINE.DISTANCE - HISTORICAL_BLEED_SIZE_MM,
+					CROP_MARK_MARGIN_MM - HISTORICAL_BLEED_SIZE_MM,
 					HISTORICAL_BLEED_SIZE_MM,
 					'this is the fixed point: the two insets used to be equal'
 				);
 			}
 		},
 		{
+			// New coverage for the v2 identity: a bleed that equals the margin makes the
+			// bleed box coincide with the media box, because the inset is 0.
+			name: 'page-boxes: a bleed equal to the margin puts the bleed box on the page',
+			run: () => {
+				const boxes = computePageBoxes(
+					ARTWORK_WIDTH_MM,
+					ARTWORK_HEIGHT_MM,
+					CROP_MARK_MARGIN_MM,
+					CROP_MARK_MARGIN_MM
+				);
+
+				assertBox(boxes.media, expectedMediaBox(), 'media box');
+				assertBox(boxes.trim, expectedTrimBox(), 'trim box');
+				assertBox(
+					boxes.bleed,
+					expectedMediaBox(),
+					'bleed box must coincide with the media box'
+				);
+				assertBox(boxes.bleed, boxes.media, 'a bleed equal to the margin must reach the page');
+			}
+		},
+		{
 			name: 'page-boxes: a zero bleed size makes the bleed box coincide with the trim box',
 			run: () => {
-				const boxes = computePageBoxes(ARTWORK_WIDTH_MM, ARTWORK_HEIGHT_MM, 0, true);
+				const boxes = computePageBoxes(
+					ARTWORK_WIDTH_MM,
+					ARTWORK_HEIGHT_MM,
+					CROP_MARK_MARGIN_MM,
+					0
+				);
 
 				assertBox(boxes.media, expectedMediaBox(), 'media box');
 				assertBox(boxes.trim, expectedTrimBox(), 'trim box');
@@ -186,13 +224,18 @@ export function getPageBoxesCases(): VerifyCase[] {
 			}
 		},
 		{
-			name: 'page-boxes: a bleed size larger than the crop-mark distance clamps the bleed box',
+			name: 'page-boxes: a bleed size larger than the margin clamps the bleed box to the page',
 			run: () => {
+				// This case used to encode "a bleed larger than the crop-mark distance" back
+				// when the margin was always `CROPLINE.DISTANCE`. Rule 2 of the v2 contract
+				// changed the caller: `pageMarginMM` now grows the page to the bleed, so the
+				// margin equals the bleed and this clamp is the defensive floor for a bleed
+				// that somehow exceeds the margin it was given.
 				const boxes = computePageBoxes(
 					ARTWORK_WIDTH_MM,
 					ARTWORK_HEIGHT_MM,
-					OVERSIZED_BLEED_SIZE_MM,
-					true
+					CROP_MARK_MARGIN_MM,
+					OVERSIZED_BLEED_SIZE_MM
 				);
 
 				assertBox(boxes.media, expectedMediaBox(), 'media box');
@@ -207,8 +250,8 @@ export function getPageBoxesCases(): VerifyCase[] {
 				const boxes = computePageBoxes(
 					ARTWORK_WIDTH_MM,
 					ARTWORK_HEIGHT_MM,
-					NEGATIVE_BLEED_SIZE_MM,
-					true
+					CROP_MARK_MARGIN_MM,
+					NEGATIVE_BLEED_SIZE_MM
 				);
 
 				assertBox(boxes.media, expectedMediaBox(), 'media box');
@@ -219,15 +262,18 @@ export function getPageBoxesCases(): VerifyCase[] {
 			}
 		},
 		{
-			name: 'page-boxes: without the page margin all three boxes are the artwork at the origin',
+			name: 'page-boxes: without the page margin and without a bleed all three boxes are the artwork',
 			run: () => {
-				// The flag is the page-margin flag, not a crop-marks flag (`needsPageMargin`):
-				// with no marks and no bleed fill the page is just the artwork.
+				// The old case passed `withPageMargin: false` together with a non-zero bleed
+				// size, and the flag suppressed both. The margin and the declared bleed are
+				// now separate inputs, so the "no margin, no bleed" geometry - which is what
+				// `cropMarks: 0` with `bleedMode: 'none'` produces - is margin 0 with a bleed
+				// that has nothing to grow into.
 				const boxes = computePageBoxes(
 					ARTWORK_WIDTH_MM,
 					ARTWORK_HEIGHT_MM,
-					DEFAULT_BLEED_SIZE_MM,
-					false
+					0,
+					DEFAULT_BLEED_SIZE_MM
 				);
 
 				assertBox(boxes.media, expectedArtworkBox(), 'media box');
@@ -262,11 +308,12 @@ export function getPageBoxesCases(): VerifyCase[] {
 				const page = produced.getPage(0);
 				assertProducedBox(page.getMediaBox(), expectedMediaBox(), 'produced media box');
 				assertProducedBox(page.getTrimBox(), expectedTrimBox(), 'produced trim box');
-				assertProducedBox(
-					page.getBleedBox(),
-					expectedBleedBox(DEFAULT_BLEED_SIZE_MM),
-					'produced bleed box'
-				);
+				// This expectation moved with decision 3 of the v2 contract ("`none` declares
+				// no bleed"). The case used to expect the bleed box at `art + 2 * bleedSize`,
+				// the pre-v2 contract in which even `none` declared a bleed; now `none`
+				// declares 0, so the produced BleedBox equals the TrimBox. The case name
+				// ("the trim box on the artwork") still describes what it proves.
+				assertProducedBox(page.getBleedBox(), expectedTrimBox(), 'produced bleed box');
 			}
 		}
 	];

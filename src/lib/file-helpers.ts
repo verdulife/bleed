@@ -1,4 +1,4 @@
-import type { PDFOptions } from '@/lib/types';
+import type { BleedMode, PDFOptions } from '@/lib/types';
 import { degrees, PDFDocument, PDFEmbeddedPage, PDFImage, PDFPage } from 'pdf-lib';
 import { get } from 'svelte/store';
 import { FILE_TYPE, isJPEG, isPDF, isPNG, POINTS_TO_MM, toMM, toPT } from '@/lib/constants';
@@ -8,9 +8,12 @@ import { computePageBoxes, type PageBox } from '@/lib/page-boxes';
 import { drawMirrorBleed } from '@/lib/settings-helpers';
 import { addCropMarks } from '@/lib/crop-marks';
 import {
+	clipExtendsToBleed,
+	declaredBleedMM,
 	drawsMirrorBleed,
-	needsPageMargin,
-	resolveArtworkTargetBox
+	pageMarginMM,
+	resolveArtworkTargetBox,
+	usesCoverFit
 } from '@/lib/bleed-mode';
 import { closeCropMask, openCropMask } from './pdf-extend';
 
@@ -109,8 +112,13 @@ function hasContents(page: PDFPage) {
 
 /**
  * Applies the output page geometry via `computePageBoxes`, the single source of truth for
- * the box math. `rotate` swaps the artwork axes first, and is only ever true for the
- * artwork path (an empty page has no aspect ratio to rotate against).
+ * the box math.
+ *
+ * The margin and the declared bleed are two independent decisions of `bleed-mode.ts`
+ * (`pageMarginMM`, `declaredBleedMM`), one per row of the acceptance table: the margin
+ * holds the crop marks and/or the bleed area, while `none` declares no bleed at all, so its
+ * BleedBox equals the TrimBox. `rotate` swaps the artwork axes first, and is only ever true
+ * for the artwork path (an empty page has no aspect ratio to rotate against).
  */
 function applyPageGeometry(
 	page: PDFPage,
@@ -128,13 +136,11 @@ function applyPageGeometry(
 		userHeightMM = tempWidth;
 	}
 
-	// The page grows for the crop marks and/or the bleed area: either concern on its own is
-	// enough, so `cropMarks` and `bleedMode` stay independent settings.
 	const boxes = computePageBoxes(
 		userWidthMM,
 		userHeightMM,
-		bleedSizeMM,
-		needsPageMargin(cropMarks, bleedMode)
+		pageMarginMM(cropMarks, bleedMode, bleedSizeMM),
+		declaredBleedMM(bleedMode, bleedSizeMM)
 	);
 
 	page.setMediaBox(
@@ -186,12 +192,19 @@ function setDocument(embedFile: PDFEmbeddedPage | PDFImage, page: PDFPage) {
  * Fits the artwork into `targetBox`, the box the artwork is placed on. The caller resolves
  * it through `resolveArtworkTargetBox`, so it is already in points: `none` and `mirror` fit
  * the artwork into the trim box, while `natural` fits it into the bleed box so the artwork
- * itself covers the bleed area (B3 in the feature document). Contain and cover are the
- * untouched `fit` semantics, applied in every mode including `natural`; only the target box
- * is parameterised.
+ * itself covers the bleed area (B3 in the feature document).
+ *
+ * `cover` is the **effective** cover decision, already resolved by
+ * `usesCoverFit(fit, mode)`: `natural` always covers the bleed area whatever `Crop to fit`
+ * says (decision 1), so the crop-fit policy lives in `bleed-mode.ts` and this function owns
+ * only the geometry.
  */
-function setEmbed(embedFile: PDFEmbeddedPage | PDFImage, page: PDFPage, targetBox: PageBox) {
-	const { fit } = get(bleedSettings);
+function setEmbed(
+	embedFile: PDFEmbeddedPage | PDFImage,
+	page: PDFPage,
+	targetBox: PageBox,
+	cover: boolean
+) {
 	const mediaBoxSize = page.getMediaBox();
 	const safeTargetBox = targetBox.width === 0 ? mediaBoxSize : targetBox;
 	const embedRatio = embedFile.width / embedFile.height;
@@ -201,7 +214,7 @@ function setEmbed(embedFile: PDFEmbeddedPage | PDFImage, page: PDFPage, targetBo
 	let x = (mediaBoxSize.width - width) / 2;
 	let y = (mediaBoxSize.height - height) / 2;
 
-	if (fit) {
+	if (cover) {
 		width = Math.max(safeTargetBox.width, safeTargetBox.height * embedRatio);
 		height = Math.max(safeTargetBox.height, safeTargetBox.width / embedRatio);
 		x = (mediaBoxSize.width - width) / 2;
@@ -211,13 +224,24 @@ function setEmbed(embedFile: PDFEmbeddedPage | PDFImage, page: PDFPage, targetBo
 	return { x, y, width, height };
 }
 
+/**
+ * The box the artwork is clipped to, the other half of the mode decision: `none` clips to
+ * the trim box so the artwork cannot escape into the mark margin, while `mirror` and
+ * `natural` clip to the bleed box so the fill may reach the bleed line. Resolved on the
+ * page, after `applyPageGeometry`, so it is a read in points.
+ */
+function artworkClipBox(page: PDFPage, mode: BleedMode): PageBox {
+	return clipExtendsToBleed(mode) ? page.getBleedBox() : page.getTrimBox();
+}
+
 export function embedFileOnPage(
 	embedFile: PDFEmbeddedPage | PDFImage,
 	page: PDFPage,
 	embedOptions: PDFOptions,
-	applyMirrorBleed: boolean
+	applyMirrorBleed: boolean,
+	clipBox: PageBox
 ) {
-	openCropMask(page);
+	openCropMask(page, clipBox);
 
 	if (embedFile.constructor.name.toLowerCase().includes('page')) {
 		page.drawPage(embedFile as PDFEmbeddedPage, embedOptions);
@@ -259,14 +283,26 @@ export function addBlankPage(pdfDoc: PDFDocument, widthMM: number, heightMM: num
 function drawPdf(embedFile: PDFEmbeddedPage, page: PDFPage, embedOptions: PDFOptions) {
 	const { bleedMode } = get(bleedSettings);
 
-	embedFileOnPage(embedFile, page, embedOptions, drawsMirrorBleed(bleedMode));
+	embedFileOnPage(
+		embedFile,
+		page,
+		embedOptions,
+		drawsMirrorBleed(bleedMode),
+		artworkClipBox(page, bleedMode)
+	);
 	addCropMarksIfEnabled(page);
 }
 
 function drawImage(embedFile: PDFImage, page: PDFPage, embedOptions: PDFOptions) {
 	const { bleedMode } = get(bleedSettings);
 
-	embedFileOnPage(embedFile, page, embedOptions, drawsMirrorBleed(bleedMode));
+	embedFileOnPage(
+		embedFile,
+		page,
+		embedOptions,
+		drawsMirrorBleed(bleedMode),
+		artworkClipBox(page, bleedMode)
+	);
 	addCropMarksIfEnabled(page);
 }
 
@@ -298,10 +334,12 @@ export const fileHandler = {
 			embedIndex += 1;
 
 			setDocument(embedFile, page);
+			const { fit, bleedMode } = get(bleedSettings);
 			const embedOptions = setEmbed(
 				embedFile,
 				page,
-				resolveArtworkTargetBox(page, get(bleedSettings).bleedMode)
+				resolveArtworkTargetBox(page, bleedMode),
+				usesCoverFit(fit, bleedMode)
 			);
 			drawPdf(embedFile, page, embedOptions);
 		}
@@ -312,10 +350,12 @@ export const fileHandler = {
 		const page = pdfDoc.addPage();
 
 		const rotate = setDocument(embedFile, page);
+		const { fit, bleedMode } = get(bleedSettings);
 		const embedOptions = setEmbed(
 			embedFile,
 			page,
-			resolveArtworkTargetBox(page, get(bleedSettings).bleedMode)
+			resolveArtworkTargetBox(page, bleedMode),
+			usesCoverFit(fit, bleedMode)
 		);
 		drawImage(embedFile, page, embedOptions);
 
@@ -327,10 +367,12 @@ export const fileHandler = {
 		const page = pdfDoc.addPage();
 
 		setDocument(embedFile, page);
+		const { fit, bleedMode } = get(bleedSettings);
 		const embedOptions = setEmbed(
 			embedFile,
 			page,
-			resolveArtworkTargetBox(page, get(bleedSettings).bleedMode)
+			resolveArtworkTargetBox(page, bleedMode),
+			usesCoverFit(fit, bleedMode)
 		);
 		drawImage(embedFile, page, embedOptions);
 	}

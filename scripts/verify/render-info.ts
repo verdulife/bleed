@@ -164,13 +164,16 @@ function expectedMediaSize(): BoxSize {
 	};
 }
 
-/** The bleed box: the media box inset by `CROPLINE.DISTANCE - bleedSize`. */
+/**
+ * The bleed box of a `bleedMode: 'none'` run (the only mode these cases use).
+ *
+ * v2 decision 3 changed this expectation: it used to be the media box inset by
+ * `CROPLINE.DISTANCE - BLEED_SIZE_MM`, that is `art + 2 x BLEED_SIZE_MM`, because the
+ * pre-v2 contract declared a bleed in `none` mode too. `none` now declares **no** bleed, so
+ * the produced BleedBox equals the TrimBox and the panel reads the artwork size back.
+ */
 function expectedBleedSize(): BoxSize {
-	const insetMM = CROPLINE.DISTANCE - BLEED_SIZE_MM;
-	return {
-		width: expectedMediaSize().width - 2 * insetMM,
-		height: expectedMediaSize().height - 2 * insetMM
-	};
+	return documentSize();
 }
 
 function documentSize(): BoxSize {

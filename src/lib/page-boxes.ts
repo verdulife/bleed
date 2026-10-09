@@ -1,63 +1,59 @@
 /**
  * The single source of truth for the prepress page-box geometry, in millimetres.
  *
- * `addCropMarks` (`src/lib/crop-marks.ts`) draws every mark `CROPLINE.DISTANCE` away from
- * the media edge, so the trim line it marks is exactly `CROPLINE.DISTANCE` from that edge.
- * This module encodes the same convention as the output page boxes, which keeps the trim
- * box on the artwork edge whatever the bleed size is.
+ * The margin is **per side**, from the media edge to the trim line, and it is the caller's
+ * decision (`pageMarginMM` in `src/lib/bleed-mode.ts`): it is `CROPLINE.DISTANCE` when the
+ * crop marks need room, the bleed when the page only grows for a bleed, and the larger of
+ * the two when both apply. `addCropMarks` (`src/lib/crop-marks.ts`) anchors its marks to
+ * the trim line **read from this geometry**, so whatever the caller decides, the marks land
+ * on the artwork edge.
  *
  * It is deliberately pure: no store access and no pdf-lib import, so the geometry can be
  * checked directly by `scripts/verify/page-boxes.ts`.
  */
-import { CROPLINE } from '@/lib/constants';
-
 export type PageBox = { x: number; y: number; width: number; height: number };
 export type PageBoxes = { media: PageBox; bleed: PageBox; trim: PageBox };
 
 /**
  * The three boxes of one output page, all in millimetres.
  *
- * - `media` = the artwork plus `CROPLINE.DISTANCE` on every side (room for the crop marks
- *   and for the bleed area).
- * - `trim`  = the media box inset by `CROPLINE.DISTANCE`, which is exactly the artwork
- *   area, so the crop marks drawn at that distance land on the artwork edge.
- * - `bleed` = the media box inset by `CROPLINE.DISTANCE - bleedSizeMM`: the bleed extends
- *   `bleedSizeMM` beyond the trim line. The inset is clamped so it can never invert, and a
- *   negative `bleedSizeMM` is treated as 0.
+ * - `media` = the artwork plus `marginMM` on every side (room for the crop marks and/or for
+ *   the bleed area).
+ * - `trim`  = the media box inset by `marginMM`, which is exactly the artwork area.
+ * - `bleed` = the media box inset by `max(0, marginMM - bleedMM)`, the "declared" bleed:
+ *   the amount the BleedBox extends past the TrimBox. The caller passes the declared bleed,
+ *   which is 0 in `none` mode (`declaredBleedMM`), so the BleedBox equals the TrimBox there.
  *
- * Without the page margin the page is just the artwork and all three boxes are identical,
- * which is the behaviour the app already had and must keep. The margin is requested by the
- * caller (`needsPageMargin` in `src/lib/bleed-mode.ts`): it is needed when crop marks are
- * on **or** a bleed fill is wanted, so this flag is a page-margin flag, not a crop-marks
- * flag.
+ * Two identities hold and are asserted in the harness: with `marginMM === bleedMM` the
+ * bleed box coincides with the page (the inset is 0), and with `bleedMM === 0` it coincides
+ * with the trim box. A bleed larger than the margin and a negative bleed both degrade to
+ * "no extra room" instead of producing an inverted box.
  */
 export function computePageBoxes(
 	artworkWidthMM: number,
 	artworkHeightMM: number,
-	bleedSizeMM: number,
-	withPageMargin: boolean
+	marginMM: number,
+	bleedMM: number
 ): PageBoxes {
-	if (!withPageMargin) {
-		const artwork: PageBox = { x: 0, y: 0, width: artworkWidthMM, height: artworkHeightMM };
-		return { media: { ...artwork }, bleed: { ...artwork }, trim: { ...artwork } };
-	}
-
+	// A negative margin reaches this function only through a caller bug; clamping it keeps
+	// the identity `media = art + 2 * margin` true and never lets the boxes invert.
+	const margin = Math.max(0, marginMM);
 	const media: PageBox = {
 		x: 0,
 		y: 0,
-		width: artworkWidthMM + 2 * CROPLINE.DISTANCE,
-		height: artworkHeightMM + 2 * CROPLINE.DISTANCE
+		width: artworkWidthMM + 2 * margin,
+		height: artworkHeightMM + 2 * margin
 	};
 
-	// The bleed inset shrinks as `bleedSizeMM` grows. Clamping it at 0 (and clamping a
-	// negative bleed size at 0 first) means an oversized or negative bleed degrades to the
-	// media box instead of producing a box with a negative width or height.
-	const bleedInsetMM = Math.max(0, CROPLINE.DISTANCE - Math.max(0, bleedSizeMM));
+	// The bleed inset shrinks as `bleedMM` grows. Clamping it at 0 (and clamping a negative
+	// bleed size at 0 first) means an oversized or negative bleed degrades to the media box
+	// instead of producing a box with a negative width or height.
+	const bleedInsetMM = Math.max(0, margin - Math.max(0, bleedMM));
 
 	return {
 		media,
 		bleed: insetBox(media, bleedInsetMM),
-		trim: insetBox(media, CROPLINE.DISTANCE)
+		trim: insetBox(media, margin)
 	};
 }
 
