@@ -23,3 +23,10 @@ export const userFiles: Writable<Array<UserFile>> = writable([]);
 export const manualOrder: Writable<boolean> = writable(false);
 
 export const previewBlobUri = writable('');
+
+/**
+ * User-facing messages about the last generation: one entry per file that could not be
+ * processed, plus a closing entry when the document ended up without pages. It is reset at
+ * the start of every generation, so the notice never shows a previous run's failures.
+ */
+export const generationErrors: Writable<string[]> = writable([]);

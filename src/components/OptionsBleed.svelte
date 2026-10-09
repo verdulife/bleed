@@ -5,6 +5,7 @@
 	import InputSizes from '@/components/InputSizes.svelte';
 	import InputCheck from '@/components/InputCheck.svelte';
 	import InputFile from '@/components/InputFile.svelte';
+	import GenerationNotice from '@/components/GenerationNotice.svelte';
 	import SelectPresets from '@/components/SelectPresets.svelte';
 	import ButtonGenerate from './ButtonGenerate.svelte';
 </script>
@@ -12,6 +13,8 @@
 <OptionBox>
 	<InputFile />
 </OptionBox>
+
+<GenerationNotice />
 
 <OptionBox>
 	<InputSizes bind:setting={$bleedSettings.document}>Document size</InputSizes>

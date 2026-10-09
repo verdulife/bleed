@@ -5,6 +5,8 @@
  * `odd/tasks/file-order-and-pdf-fixes.md`, "Resolved decisions" #4): the checks are
  * plain assertions in a committed script, run with `bun run verify`.
  */
+import { toPT } from '@/lib/constants';
+import { PDFDocument, rgb } from 'pdf-lib';
 
 export type VerifyCase = {
 	/** Case name, printed verbatim in the PASS/FAIL line. */
@@ -52,4 +54,28 @@ export function assertUnique(ids: number[], context: string) {
 			].join(', ')})`
 		);
 	}
+}
+
+// --- PDF fixtures ------------------------------------------------------------
+
+/**
+ * A one-page source PDF with a painted content stream, that is, a valid and embeddable
+ * input for `fileHandler[FILE_TYPE.PDF]`. It mirrors the fixture style of
+ * `pdf-blank-pages.ts` (a painted page, not an empty one, so the embedder has artwork to
+ * place) and lives here because more than one verification module needs it.
+ *
+ * The caller passes the size in millimetres; points are only an implementation detail.
+ * `bytes.slice().buffer` normalises pdf-lib's `Uint8Array` into a standalone
+ * `ArrayBuffer`, which is what the real `UserFile.fileBuffer` carries.
+ */
+export async function buildPaintedPdfFixture(
+	widthMM: number,
+	heightMM: number
+): Promise<ArrayBuffer> {
+	const source = await PDFDocument.create();
+	const page = source.addPage([toPT(widthMM), toPT(heightMM)]);
+	page.drawRectangle({ x: 10, y: 20, width: 40, height: 50, color: rgb(0.2, 0.4, 0.6) });
+
+	const bytes = await source.save();
+	return bytes.slice().buffer as ArrayBuffer;
 }
