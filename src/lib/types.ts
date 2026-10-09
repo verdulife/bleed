@@ -3,6 +3,22 @@ export type DocSize = {
 	height: number;
 };
 
+/** A page-box size in millimetres. */
+export type BoxSize = { width: number; height: number };
+
+/**
+ * The geometry of the document that was produced, in millimetres, as it was read back from
+ * the generated PDF: `artwork` is the trim-box size (the document the user asked for),
+ * `media` is the media-box size (the page with the crop marks) and `bleed` is the
+ * bleed-box size.
+ */
+export type RenderInfo = {
+	artwork: BoxSize;
+	media: BoxSize;
+	bleed: BoxSize;
+	pageCount: number;
+};
+
 export type BleedSettings = {
 	document: DocSize;
 	fit: 0 | 1;

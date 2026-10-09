@@ -15,13 +15,15 @@ import { getFileOrderCases } from './file-order';
 import { getPdfBlankPageCases } from './pdf-blank-pages';
 import { getPdfErrorCases } from './pdf-errors';
 import { getPageBoxesCases } from './page-boxes';
+import { getRenderInfoCases } from './render-info';
 
 const modules: Array<{ label: string; load: VerifyModule }> = [
 	{ label: 'file-ids', load: getFileIdsCases },
 	{ label: 'file-order', load: getFileOrderCases },
 	{ label: 'pdf-blank-pages', load: getPdfBlankPageCases },
 	{ label: 'pdf-errors', load: getPdfErrorCases },
-	{ label: 'page-boxes', load: getPageBoxesCases }
+	{ label: 'page-boxes', load: getPageBoxesCases },
+	{ label: 'render-info', load: getRenderInfoCases }
 ];
 
 async function main() {
