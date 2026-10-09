@@ -1,9 +1,10 @@
 import type { PDFOptions } from '@/lib/types';
 import { degrees, PDFDocument, PDFEmbeddedPage, PDFImage, PDFPage } from 'pdf-lib';
 import { get } from 'svelte/store';
-import { CROPLINE, FILE_TYPE, isJPEG, isPDF, isPNG, POINTS_TO_MM, toMM, toPT } from '@/lib/constants';
+import { FILE_TYPE, isJPEG, isPDF, isPNG, POINTS_TO_MM, toMM, toPT } from '@/lib/constants';
 import { userFiles, bleedSettings, manualOrder } from '@/lib/stores';
 import { addFilesInOrder } from '@/lib/file-order';
+import { computePageBoxes, type PageBox } from '@/lib/page-boxes';
 import { drawMirrorBleed } from '@/lib/settings-helpers';
 import { addCropMarks } from '@/lib/crop-marks';
 import { closeCropMask, openCropMask } from './pdf-extend';
@@ -102,10 +103,9 @@ function hasContents(page: PDFPage) {
 }
 
 /**
- * Applies the output page geometry: the media box grows by the crop-mark distance,
- * the bleed box grows by the bleed size and the trim box sits on the artwork.
- * `rotate` swaps the artwork axes first, and is only ever true for the artwork path
- * (an empty page has no aspect ratio to rotate against).
+ * Applies the output page geometry via `computePageBoxes`, the single source of truth for
+ * the box math. `rotate` swaps the artwork axes first, and is only ever true for the
+ * artwork path (an empty page has no aspect ratio to rotate against).
  */
 function applyPageGeometry(
 	page: PDFPage,
@@ -123,54 +123,27 @@ function applyPageGeometry(
 		userHeightMM = tempWidth;
 	}
 
-	let mediaBoxSize = { x: 0, y: 0, width: toPT(userWidthMM), height: toPT(userHeightMM) };
-	let bleedBoxSize = { x: 0, y: 0, width: toPT(userWidthMM), height: toPT(userHeightMM) };
-	let trimBoxSize = { x: 0, y: 0, width: toPT(userWidthMM), height: toPT(userHeightMM) };
-
-	if (cropMarksAndBleed) {
-		const cropMarkSizeMM = CROPLINE.SIZE - CROPLINE.OVERLAY;
-
-		mediaBoxSize = {
-			x: 0,
-			y: 0,
-			width: toPT(CROPLINE.DISTANCE) * 2 + toPT(userWidthMM),
-			height: toPT(CROPLINE.DISTANCE) * 2 + toPT(userHeightMM)
-		}
-
-		bleedBoxSize = {
-			x: toPT(cropMarkSizeMM),
-			y: toPT(cropMarkSizeMM),
-			width: mediaBoxSize.width - toPT(cropMarkSizeMM) * 2,
-			height: mediaBoxSize.height - toPT(cropMarkSizeMM) * 2
-		}
-
-		trimBoxSize = {
-			x: toPT(bleedSizeMM + cropMarkSizeMM),
-			y: toPT(bleedSizeMM + cropMarkSizeMM),
-			width: mediaBoxSize.width - toPT(bleedSizeMM) * 2 - toPT(cropMarkSizeMM) * 2,
-			height: mediaBoxSize.height - toPT(bleedSizeMM) * 2 - toPT(cropMarkSizeMM) * 2
-		}
-	}
+	const boxes = computePageBoxes(userWidthMM, userHeightMM, bleedSizeMM, !!cropMarksAndBleed);
 
 	page.setMediaBox(
-		mediaBoxSize.x,
-		mediaBoxSize.y,
-		mediaBoxSize.width,
-		mediaBoxSize.height
+		toPT(boxes.media.x),
+		toPT(boxes.media.y),
+		toPT(boxes.media.width),
+		toPT(boxes.media.height)
 	);
 	page.setBleedBox(
-		bleedBoxSize.x,
-		bleedBoxSize.y,
-		bleedBoxSize.width,
-		bleedBoxSize.height
+		toPT(boxes.bleed.x),
+		toPT(boxes.bleed.y),
+		toPT(boxes.bleed.width),
+		toPT(boxes.bleed.height)
 	);
 	page.setTrimBox(
-		trimBoxSize.x,
-		trimBoxSize.y,
-		trimBoxSize.width,
-		trimBoxSize.height
+		toPT(boxes.trim.x),
+		toPT(boxes.trim.y),
+		toPT(boxes.trim.width),
+		toPT(boxes.trim.height)
 	);
-	page.setSize(mediaBoxSize.width, mediaBoxSize.height);
+	page.setSize(toPT(boxes.media.width), toPT(boxes.media.height));
 }
 
 function setDocument(embedFile: PDFEmbeddedPage | PDFImage, page: PDFPage) {
@@ -197,21 +170,27 @@ function setDocument(embedFile: PDFEmbeddedPage | PDFImage, page: PDFPage) {
 	return rotate;
 }
 
-function setEmbed(embedFile: PDFEmbeddedPage | PDFImage, page: PDFPage) {
+/**
+ * Fits the artwork into `targetBox`, the box the artwork is placed on. The caller reads it
+ * from the page (`page.getTrimBox()` today), so it is already in points. Contain and cover
+ * are the untouched `fit` semantics; only the target box is parameterised, so a later
+ * bleed mode can fit the artwork to the bleed box instead of the trim box (B3 in the
+ * feature document) without changing this routine.
+ */
+function setEmbed(embedFile: PDFEmbeddedPage | PDFImage, page: PDFPage, targetBox: PageBox) {
 	const { fit } = get(bleedSettings);
 	const mediaBoxSize = page.getMediaBox();
-	const trimBoxSize = page.getTrimBox();
-	const safeTrimBox = trimBoxSize.width === 0 ? mediaBoxSize : trimBoxSize;
+	const safeTargetBox = targetBox.width === 0 ? mediaBoxSize : targetBox;
 	const embedRatio = embedFile.width / embedFile.height;
 
-	let width = Math.min(safeTrimBox.width, safeTrimBox.height * embedRatio);
-	let height = Math.min(safeTrimBox.height, safeTrimBox.width / embedRatio);
+	let width = Math.min(safeTargetBox.width, safeTargetBox.height * embedRatio);
+	let height = Math.min(safeTargetBox.height, safeTargetBox.width / embedRatio);
 	let x = (mediaBoxSize.width - width) / 2;
 	let y = (mediaBoxSize.height - height) / 2;
 
 	if (fit) {
-		width = Math.max(safeTrimBox.width, safeTrimBox.height * embedRatio);
-		height = Math.max(safeTrimBox.height, safeTrimBox.width / embedRatio);
+		width = Math.max(safeTargetBox.width, safeTargetBox.height * embedRatio);
+		height = Math.max(safeTargetBox.height, safeTargetBox.width / embedRatio);
 		x = (mediaBoxSize.width - width) / 2;
 		y = (mediaBoxSize.height - height) / 2;
 	}
@@ -290,7 +269,7 @@ export const fileHandler = {
 			embedIndex += 1;
 
 			setDocument(embedFile, page);
-			const embedOptions = setEmbed(embedFile, page);
+			const embedOptions = setEmbed(embedFile, page, page.getTrimBox());
 			drawPdf(embedFile, page, embedOptions);
 		}
 	},
@@ -300,7 +279,7 @@ export const fileHandler = {
 		const page = pdfDoc.addPage();
 
 		const rotate = setDocument(embedFile, page);
-		const embedOptions = setEmbed(embedFile, page);
+		const embedOptions = setEmbed(embedFile, page, page.getTrimBox());
 		drawImage(embedFile, page, embedOptions);
 
 		if (rotate) page.setRotation(degrees(-90));
@@ -311,7 +290,7 @@ export const fileHandler = {
 		const page = pdfDoc.addPage();
 
 		setDocument(embedFile, page);
-		const embedOptions = setEmbed(embedFile, page);
+		const embedOptions = setEmbed(embedFile, page, page.getTrimBox());
 		drawImage(embedFile, page, embedOptions);
 	}
 };
