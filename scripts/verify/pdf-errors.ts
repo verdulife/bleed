@@ -85,9 +85,9 @@ function makeSettings() {
 		document: { width: DOCUMENT_WIDTH_MM, height: DOCUMENT_HEIGHT_MM },
 		fit: 1 as const,
 		autoRotate: 1 as const,
-		cropMarksAndBleed: 1 as const,
+		cropMarks: 1 as const,
 		bleedSize: BLEED_SIZE_MM,
-		mirrorBleed: 0 as const
+		bleedMode: 'none' as const
 	};
 }
 

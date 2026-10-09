@@ -107,15 +107,15 @@ async function assertFixtureShape(fixture: ArrayBuffer, hasContents: boolean[]) 
 	});
 }
 
-async function setSettings(cropMarksAndBleed: 0 | 1) {
+async function setSettings(cropMarks: 0 | 1) {
 	const { bleedSettings } = await loadStores();
 	bleedSettings.set({
 		document: { width: DOCUMENT_WIDTH_MM, height: DOCUMENT_HEIGHT_MM },
 		fit: 1,
 		autoRotate: 1,
-		cropMarksAndBleed,
+		cropMarks,
 		bleedSize: BLEED_SIZE_MM,
-		mirrorBleed: 0
+		bleedMode: 'none'
 	});
 }
 
@@ -227,7 +227,7 @@ export function getPdfBlankPageCases(): VerifyCase[] {
 				// stream, so its presence proves the crop marks were drawn.
 				assert(
 					output.getPage(1).node.Contents() !== undefined,
-					'the blank page must still get crop marks when crop marks and bleed are on'
+					'the blank page must still get crop marks when crop marks are on'
 				);
 				await output.save({ addDefaultPage: false });
 			}

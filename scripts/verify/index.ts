@@ -17,6 +17,7 @@ import { getPdfErrorCases } from './pdf-errors';
 import { getPageBoxesCases } from './page-boxes';
 import { getRenderInfoCases } from './render-info';
 import { getBlankTemplateCases } from './blank-template';
+import { getBleedModeCases } from './bleed-modes';
 
 const modules: Array<{ label: string; load: VerifyModule }> = [
 	{ label: 'file-ids', load: getFileIdsCases },
@@ -25,7 +26,8 @@ const modules: Array<{ label: string; load: VerifyModule }> = [
 	{ label: 'pdf-errors', load: getPdfErrorCases },
 	{ label: 'page-boxes', load: getPageBoxesCases },
 	{ label: 'render-info', load: getRenderInfoCases },
-	{ label: 'blank-template', load: getBlankTemplateCases }
+	{ label: 'blank-template', load: getBlankTemplateCases },
+	{ label: 'bleed-modes', load: getBleedModeCases }
 ];
 
 async function main() {

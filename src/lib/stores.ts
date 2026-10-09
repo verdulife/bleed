@@ -8,9 +8,9 @@ export const bleedSettings: Writable<BleedSettings> = writable({
 	},
 	fit: 1,
 	autoRotate: 1,
-	cropMarksAndBleed: 0,
+	cropMarks: 0,
 	bleedSize: 2,
-	mirrorBleed: 0
+	bleedMode: 'none'
 });
 
 export const userFiles: Writable<Array<UserFile>> = writable([]);

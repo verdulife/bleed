@@ -17,23 +17,27 @@ export type PageBoxes = { media: PageBox; bleed: PageBox; trim: PageBox };
 /**
  * The three boxes of one output page, all in millimetres.
  *
- * - `media` = the artwork plus `CROPLINE.DISTANCE` on every side (room for the crop marks).
+ * - `media` = the artwork plus `CROPLINE.DISTANCE` on every side (room for the crop marks
+ *   and for the bleed area).
  * - `trim`  = the media box inset by `CROPLINE.DISTANCE`, which is exactly the artwork
  *   area, so the crop marks drawn at that distance land on the artwork edge.
  * - `bleed` = the media box inset by `CROPLINE.DISTANCE - bleedSizeMM`: the bleed extends
  *   `bleedSizeMM` beyond the trim line. The inset is clamped so it can never invert, and a
  *   negative `bleedSizeMM` is treated as 0.
  *
- * With crop marks off the page is just the artwork and all three boxes are identical,
- * which is the behaviour the app already had and must keep.
+ * Without the page margin the page is just the artwork and all three boxes are identical,
+ * which is the behaviour the app already had and must keep. The margin is requested by the
+ * caller (`needsPageMargin` in `src/lib/bleed-mode.ts`): it is needed when crop marks are
+ * on **or** a bleed fill is wanted, so this flag is a page-margin flag, not a crop-marks
+ * flag.
  */
 export function computePageBoxes(
 	artworkWidthMM: number,
 	artworkHeightMM: number,
 	bleedSizeMM: number,
-	withCropMarks: boolean
+	withPageMargin: boolean
 ): PageBoxes {
-	if (!withCropMarks) {
+	if (!withPageMargin) {
 		const artwork: PageBox = { x: 0, y: 0, width: artworkWidthMM, height: artworkHeightMM };
 		return { media: { ...artwork }, bleed: { ...artwork }, trim: { ...artwork } };
 	}

@@ -97,7 +97,7 @@ const GARBAGE_PDF = new Uint8Array([0x00, 0x01, 0x02, 0x03, 0x04]).buffer;
 
 type SettingsOverrides = {
 	document?: { width: number; height: number };
-	cropMarksAndBleed?: 0 | 1;
+	cropMarks?: 0 | 1;
 };
 
 function makeSettings(overrides: SettingsOverrides = {}): BleedSettings {
@@ -105,9 +105,9 @@ function makeSettings(overrides: SettingsOverrides = {}): BleedSettings {
 		document: overrides.document ?? { width: DOCUMENT_WIDTH_MM, height: DOCUMENT_HEIGHT_MM },
 		fit: 1,
 		autoRotate: 1,
-		cropMarksAndBleed: overrides.cropMarksAndBleed ?? 1,
+		cropMarks: overrides.cropMarks ?? 1,
 		bleedSize: BLEED_SIZE_MM,
-		mirrorBleed: 0
+		bleedMode: 'none'
 	};
 }
 
@@ -279,7 +279,7 @@ export function getBlankTemplateCases(): VerifyCase[] {
 		{
 			name: 'blank-template: no files and crop marks off give one page the size of the document',
 			run: async () => {
-				await runGeneration([], makeSettings({ cropMarksAndBleed: 0 }));
+				await runGeneration([], makeSettings({ cropMarks: 0 }));
 
 				assertEqual(publishedBlobs.length, 1, 'the template must still be published');
 				assertEqual(

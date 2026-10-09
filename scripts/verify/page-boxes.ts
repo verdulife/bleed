@@ -219,8 +219,10 @@ export function getPageBoxesCases(): VerifyCase[] {
 			}
 		},
 		{
-			name: 'page-boxes: without crop marks all three boxes are the artwork at the origin',
+			name: 'page-boxes: without the page margin all three boxes are the artwork at the origin',
 			run: () => {
+				// The flag is the page-margin flag, not a crop-marks flag (`needsPageMargin`):
+				// with no marks and no bleed fill the page is just the artwork.
 				const boxes = computePageBoxes(
 					ARTWORK_WIDTH_MM,
 					ARTWORK_HEIGHT_MM,
@@ -241,9 +243,9 @@ export function getPageBoxesCases(): VerifyCase[] {
 					document: { width: ARTWORK_WIDTH_MM, height: ARTWORK_HEIGHT_MM },
 					fit: 1,
 					autoRotate: 1,
-					cropMarksAndBleed: 1,
+					cropMarks: 1,
 					bleedSize: DEFAULT_BLEED_SIZE_MM,
-					mirrorBleed: 0
+					bleedMode: 'none'
 				});
 
 				const fixture = await buildPaintedPdfFixture(ARTWORK_WIDTH_MM, ARTWORK_HEIGHT_MM);

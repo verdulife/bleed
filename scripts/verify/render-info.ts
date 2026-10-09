@@ -94,7 +94,7 @@ const GARBAGE_PDF = new Uint8Array([0x00, 0x01, 0x02, 0x03, 0x04]).buffer;
 
 type SettingsOverrides = {
 	document?: { width: number; height: number };
-	cropMarksAndBleed?: 0 | 1;
+	cropMarks?: 0 | 1;
 };
 
 function makeSettings(overrides: SettingsOverrides = {}): BleedSettings {
@@ -102,9 +102,9 @@ function makeSettings(overrides: SettingsOverrides = {}): BleedSettings {
 		document: overrides.document ?? { width: DOCUMENT_WIDTH_MM, height: DOCUMENT_HEIGHT_MM },
 		fit: 1,
 		autoRotate: 1,
-		cropMarksAndBleed: overrides.cropMarksAndBleed ?? 1,
+		cropMarks: overrides.cropMarks ?? 1,
 		bleedSize: BLEED_SIZE_MM,
-		mirrorBleed: 0
+		bleedMode: 'none'
 	};
 }
 
@@ -230,7 +230,7 @@ export function getRenderInfoCases(): VerifyCase[] {
 				const fixture = await buildPaintedPdfFixture(DOCUMENT_WIDTH_MM, DOCUMENT_HEIGHT_MM);
 				await runGeneration(
 					[makeUserFile('poster.pdf', fixture, 1)],
-					makeSettings({ cropMarksAndBleed: 0 })
+					makeSettings({ cropMarks: 0 })
 				);
 
 				const info = await renderInfoOf();

@@ -19,13 +19,25 @@ export type RenderInfo = {
 	pageCount: number;
 };
 
+/**
+ * How the bleed area around the artwork is filled. It never decides whether a bleed box
+ * exists: `bleedSize` always defines the produced BleedBox, which is geometry the printer
+ * reads, so `none` means "do not fill the bleed area", not "declare no bleed".
+ *
+ * - `none`    no fill; the artwork is fitted into the trim box.
+ * - `mirror`  mirrored copies of the artwork are drawn around it (today's fill).
+ * - `natural` the artwork itself is scaled up to cover the bleed area: it is fitted into
+ *             the bleed box instead of the trim box.
+ */
+export type BleedMode = 'none' | 'mirror' | 'natural';
+
 export type BleedSettings = {
 	document: DocSize;
 	fit: 0 | 1;
 	autoRotate: 0 | 1;
-	cropMarksAndBleed: 0 | 1;
+	cropMarks: 0 | 1;
 	bleedSize: number;
-	mirrorBleed: 0 | 1;
+	bleedMode: BleedMode;
 };
 
 export type UserFile = {
