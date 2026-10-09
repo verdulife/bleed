@@ -1,7 +1,7 @@
 import type { PDFOptions } from '@/lib/types';
 import { degrees, PDFDocument, PDFEmbeddedPage, PDFImage, PDFPage } from 'pdf-lib';
 import { get } from 'svelte/store';
-import { CROPLINE, FILE_TYPE, isJPEG, isPDF, isPNG, POINTS_TO_MM, toPT } from '@/lib/constants';
+import { CROPLINE, FILE_TYPE, isJPEG, isPDF, isPNG, POINTS_TO_MM, toMM, toPT } from '@/lib/constants';
 import { userFiles, bleedSettings, manualOrder } from '@/lib/stores';
 import { addFilesInOrder } from '@/lib/file-order';
 import { drawMirrorBleed } from '@/lib/settings-helpers';
@@ -92,35 +92,40 @@ export function needsRotation(embedFile: PDFEmbeddedPage | PDFImage, page: PDFPa
 	return ((embedRatio > 1 && mediaBoxRatio < 1) || (embedRatio < 1 && mediaBoxRatio > 1));
 }
 
-function setDocument(embedFile: PDFEmbeddedPage | PDFImage, page: PDFPage) {
-	const { document, cropMarksAndBleed, bleedSize: bleedSizeMM, autoRotate } = get(bleedSettings);
-	const embedFileRatio = embedFile.width / embedFile.height;
-	let { width: userWidthMM, height: userHeightMM } = document;
+/**
+ * A source page carries artwork only when it has a content stream. `page.node.Contents()`
+ * is `undefined` for blank pages (blank backs, separators, annotation-only pages), which
+ * pdf-lib cannot embed. `node` and `Contents()` are public, so no cast is needed here.
+ */
+function hasContents(page: PDFPage) {
+	return page.node.Contents() !== undefined;
+}
 
-	if (!userWidthMM && !userHeightMM) {
-		userWidthMM = embedFile.width * POINTS_TO_MM;
-		userHeightMM = embedFile.height * POINTS_TO_MM;
-	};
-
-	if (!userWidthMM) userWidthMM = document.height * embedFileRatio;
-	if (!userHeightMM) userHeightMM = document.width / embedFileRatio;
-
-	page.setSize(toPT(userWidthMM), toPT(userHeightMM));
-	let rotate = autoRotate && needsRotation(embedFile, page);
-
-	let mediaBoxSize = { x: 0, y: 0, width: toPT(userWidthMM), height: toPT(userHeightMM) };
-	let bleedBoxSize = { x: 0, y: 0, width: toPT(userWidthMM), height: toPT(userHeightMM) };
-	let trimBoxSize = { x: 0, y: 0, width: toPT(userWidthMM), height: toPT(userHeightMM) };
+/**
+ * Applies the output page geometry: the media box grows by the crop-mark distance,
+ * the bleed box grows by the bleed size and the trim box sits on the artwork.
+ * `rotate` swaps the artwork axes first, and is only ever true for the artwork path
+ * (an empty page has no aspect ratio to rotate against).
+ */
+function applyPageGeometry(
+	page: PDFPage,
+	artworkWidthMM: number,
+	artworkHeightMM: number,
+	rotate: boolean
+) {
+	const { cropMarksAndBleed, bleedSize: bleedSizeMM } = get(bleedSettings);
+	let userWidthMM = artworkWidthMM;
+	let userHeightMM = artworkHeightMM;
 
 	if (rotate) {
 		const tempWidth = userWidthMM;
 		userWidthMM = userHeightMM;
 		userHeightMM = tempWidth;
-
-		mediaBoxSize = { x: 0, y: 0, width: toPT(userWidthMM), height: toPT(userHeightMM) };
-		bleedBoxSize = { x: 0, y: 0, width: toPT(userWidthMM), height: toPT(userHeightMM) };
-		trimBoxSize = { x: 0, y: 0, width: toPT(userWidthMM), height: toPT(userHeightMM) };
 	}
+
+	let mediaBoxSize = { x: 0, y: 0, width: toPT(userWidthMM), height: toPT(userHeightMM) };
+	let bleedBoxSize = { x: 0, y: 0, width: toPT(userWidthMM), height: toPT(userHeightMM) };
+	let trimBoxSize = { x: 0, y: 0, width: toPT(userWidthMM), height: toPT(userHeightMM) };
 
 	if (cropMarksAndBleed) {
 		const cropMarkSizeMM = CROPLINE.SIZE - CROPLINE.OVERLAY;
@@ -166,6 +171,28 @@ function setDocument(embedFile: PDFEmbeddedPage | PDFImage, page: PDFPage) {
 		trimBoxSize.height
 	);
 	page.setSize(mediaBoxSize.width, mediaBoxSize.height);
+}
+
+function setDocument(embedFile: PDFEmbeddedPage | PDFImage, page: PDFPage) {
+	const { document, autoRotate } = get(bleedSettings);
+	const embedFileRatio = embedFile.width / embedFile.height;
+	let { width: userWidthMM, height: userHeightMM } = document;
+
+	if (!userWidthMM && !userHeightMM) {
+		userWidthMM = embedFile.width * POINTS_TO_MM;
+		userHeightMM = embedFile.height * POINTS_TO_MM;
+	};
+
+	if (!userWidthMM) userWidthMM = document.height * embedFileRatio;
+	if (!userHeightMM) userHeightMM = document.width / embedFileRatio;
+
+	// `needsRotation` compares the artwork ratio against the page media box, so the
+	// artwork size must already be on the page when it is asked; `applyPageGeometry`
+	// then sets the final, crop-mark-aware boxes.
+	page.setSize(toPT(userWidthMM), toPT(userHeightMM));
+	const rotate = autoRotate === 1 && needsRotation(embedFile, page);
+
+	applyPageGeometry(page, userWidthMM, userHeightMM, rotate);
 
 	return rotate;
 }
@@ -213,33 +240,54 @@ export function embedFileOnPage(
 	closeCropMask(page);
 }
 
+/** Crop marks are drawn the same way for pages with artwork and for empty pages. */
+function addCropMarksIfEnabled(page: PDFPage) {
+	if (get(bleedSettings).cropMarksAndBleed) addCropMarks(page);
+}
+
 function drawPdf(embedFile: PDFEmbeddedPage, page: PDFPage, embedOptions: PDFOptions) {
-	const { cropMarksAndBleed, mirrorBleed } = get(bleedSettings);
+	const { mirrorBleed } = get(bleedSettings);
 
 	embedFileOnPage(embedFile, page, embedOptions, !!mirrorBleed);
-
-	if (cropMarksAndBleed) {
-		addCropMarks(page);
-	}
+	addCropMarksIfEnabled(page);
 }
 
 function drawImage(embedFile: PDFImage, page: PDFPage, embedOptions: PDFOptions) {
-	const { cropMarksAndBleed, mirrorBleed } = get(bleedSettings);
+	const { mirrorBleed } = get(bleedSettings);
 
 	embedFileOnPage(embedFile, page, embedOptions, !!mirrorBleed);
-
-	if (cropMarksAndBleed) {
-		addCropMarks(page);
-	}
+	addCropMarksIfEnabled(page);
 }
 
 export const fileHandler = {
 	async [FILE_TYPE.PDF](pdfDoc: PDFDocument, file: ArrayBuffer) {
 		const loadedFiles = await PDFDocument.load(file, { ignoreEncryption: true });
-		const embedPages = await pdfDoc.embedPages(loadedFiles.getPages());
+		const sourcePages = loadedFiles.getPages();
 
-		for (const embedFile of embedPages) {
+		// Blank source pages must never reach `embedPages`: pdf-lib registers every embedder
+		// it hands out on the output document, and a page without a content stream throws
+		// from `flush()` (that is, from `save()`) even when nothing was drawn with it.
+		const embeddablePages = sourcePages.filter((sourcePage) => hasContents(sourcePage));
+		const embedPages = await pdfDoc.embedPages(embeddablePages);
+		let embedIndex = 0;
+
+		for (const sourcePage of sourcePages) {
 			const page = pdfDoc.addPage();
+
+			// A source page without a content stream (a blank back, a separator, a page
+			// carrying only annotations) has no artwork to embed. Keep the page instead:
+			// same geometry and crop marks as a real page, no artwork.
+			if (!hasContents(sourcePage)) {
+				const mediaBox = sourcePage.getMediaBox();
+				// Rotation follows from the artwork aspect ratio, and an empty page has no
+				// artwork to rotate against, so the flag is false here.
+				applyPageGeometry(page, toMM(mediaBox.width), toMM(mediaBox.height), false);
+				addCropMarksIfEnabled(page);
+				continue;
+			}
+
+			const embedFile = embedPages[embedIndex];
+			embedIndex += 1;
 
 			setDocument(embedFile, page);
 			const embedOptions = setEmbed(embedFile, page);

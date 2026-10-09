@@ -12,10 +12,12 @@
 import type { VerifyCase, VerifyModule } from './harness';
 import { getFileIdsCases } from './file-ids';
 import { getFileOrderCases } from './file-order';
+import { getPdfBlankPageCases } from './pdf-blank-pages';
 
 const modules: Array<{ label: string; load: VerifyModule }> = [
 	{ label: 'file-ids', load: getFileIdsCases },
-	{ label: 'file-order', load: getFileOrderCases }
+	{ label: 'file-order', load: getFileOrderCases },
+	{ label: 'pdf-blank-pages', load: getPdfBlankPageCases }
 ];
 
 async function main() {
