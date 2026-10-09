@@ -36,7 +36,10 @@
 <fieldset class="flex justify-between items-center gap-2 w-full disabled:opacity-50" {disabled}>
 	<h3 class="font-semibold text-xs text-gray-400 whitespace-nowrap"><slot /></h3>
 
-	<div class="w-1/3 flex bg-white/10 rounded-md">
+	<!-- `w-1/2` of the fieldset, exactly the width one `InputSizes.svelte` field takes out of
+	     its own full-width row: at a third of the column the number had almost no room left
+	     after the padding and the `mm` suffix. -->
+	<div class="w-1/2 flex bg-white/10 rounded-md">
 		<input
 			type="number"
 			id="bleedSize"
