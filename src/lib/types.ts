@@ -20,14 +20,18 @@ export type RenderInfo = {
 };
 
 /**
- * How the bleed area around the artwork is filled. It never decides whether a bleed box
- * exists: `bleedSize` always defines the produced BleedBox, which is geometry the printer
- * reads, so `none` means "do not fill the bleed area", not "declare no bleed".
+ * How the bleed area around the artwork is filled, and what the produced page declares.
  *
- * - `none`    no fill; the artwork is fitted into the trim box.
- * - `mirror`  mirrored copies of the artwork are drawn around it (today's fill).
- * - `natural` the artwork itself is scaled up to cover the bleed area: it is fitted into
- *             the bleed box instead of the trim box.
+ * - `none`    no fill, and no bleed declared: the produced BleedBox equals the TrimBox, and the
+ *             artwork is both fitted into and clipped to the trim box, so it cannot escape into
+ *             the mark margin.
+ * - `mirror`  mirrored copies of the artwork are drawn around it.
+ * - `natural` the artwork itself is scaled up to cover the bleed area: it is fitted into the
+ *             bleed box instead of the trim box, and it always covers, because "contain" would
+ *             leave white inside the area this mode exists to fill.
+ *
+ * The page margin, the declared bleed and the clip box are decided from the mode, the crop marks
+ * and `bleedSize` in `src/lib/bleed-mode.ts`.
  */
 export type BleedMode = 'none' | 'mirror' | 'natural';
 
