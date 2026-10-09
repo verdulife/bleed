@@ -62,8 +62,9 @@ const DOCUMENT_HEIGHT_MM = 150;
  * bleed because it is a bleed below the mark distance. D3 was that the old box math only
  * put the trim box on the artwork at this value; the v2 math
  * (`computePageBoxes(art, art, margin, declaredBleed)`) is exact for every bleed size, so
- * the value no longer carries the correctness of the expectations below - it is simply not
- * the app default and not the mark distance.
+ * the value no longer carries the correctness of the expectations below. T2 made 3 mm the
+ * store default too, so the fixture passes it explicitly on purpose: these cases must not
+ * inherit a future default change.
  */
 const BLEED_SIZE_MM = CROPLINE.SIZE - CROPLINE.OVERLAY;
 

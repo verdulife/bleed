@@ -41,9 +41,13 @@ const ARTWORK_HEIGHT_MM = 297;
 const CROP_MARK_MARGIN_MM = CROPLINE.DISTANCE;
 
 /**
- * The bleed size the app ships with (`src/lib/stores.ts`: `bleedSettings.bleedSize = 2`).
+ * A small fixture bleed below the mark margin. It used to be named `DEFAULT_BLEED_SIZE_MM`
+ * and mirrored the store default, which was 2 mm when this case was written; T2 moved the
+ * store default to 3 mm, so the constant is now a purely local fixture value and every use
+ * passes it explicitly. The case must not follow the store default: its geometry is the
+ * point, not the shipped number.
  */
-const DEFAULT_BLEED_SIZE_MM = 2;
+const FIXTURE_BLEED_SIZE_MM = 2;
 
 /**
  * The historical fixed point: the old code used `CROPLINE.SIZE - CROPLINE.OVERLAY` as the
@@ -56,7 +60,7 @@ const HISTORICAL_BLEED_SIZE_MM = CROPLINE.SIZE - CROPLINE.OVERLAY;
 const OVERSIZED_BLEED_SIZE_MM = 15;
 
 /** Below zero: must be treated as no bleed at all, never as an inverted box. */
-const NEGATIVE_BLEED_SIZE_MM = -DEFAULT_BLEED_SIZE_MM;
+const NEGATIVE_BLEED_SIZE_MM = -FIXTURE_BLEED_SIZE_MM;
 
 /** Pure millimetre arithmetic, so only float noise is tolerated. */
 const MM_EPSILON = 1e-9;
@@ -145,21 +149,23 @@ function assertNotInverted(box: PageBox, label: string) {
 export function getPageBoxesCases(): VerifyCase[] {
 	return [
 		{
-			name: 'page-boxes: bleed size 2 (app default) keeps the trim box on the artwork',
+			name: 'page-boxes: a small fixture bleed size keeps the trim box on the artwork',
 			run: () => {
 				// The case used to pass the old `withPageMargin: true` flag and let the
 				// function own the `CROPLINE.DISTANCE` inset; the margin is now an input, so
 				// the same geometry is expressed as a crop-mark margin plus the declared bleed.
+				// The name used to call this value the "app default": it is a fixture value now,
+				// explicitly passed so a moved store default cannot move these expectations.
 				const boxes = computePageBoxes(
 					ARTWORK_WIDTH_MM,
 					ARTWORK_HEIGHT_MM,
 					CROP_MARK_MARGIN_MM,
-					DEFAULT_BLEED_SIZE_MM
+					FIXTURE_BLEED_SIZE_MM
 				);
 
 				assertBox(boxes.media, expectedMediaBox(), 'media box');
 				assertBox(boxes.trim, expectedTrimBox(), 'trim box must sit on the artwork');
-				assertBox(boxes.bleed, expectedBleedBox(DEFAULT_BLEED_SIZE_MM), 'bleed box');
+				assertBox(boxes.bleed, expectedBleedBox(FIXTURE_BLEED_SIZE_MM), 'bleed box');
 			}
 		},
 		{
@@ -273,7 +279,7 @@ export function getPageBoxesCases(): VerifyCase[] {
 					ARTWORK_WIDTH_MM,
 					ARTWORK_HEIGHT_MM,
 					0,
-					DEFAULT_BLEED_SIZE_MM
+					FIXTURE_BLEED_SIZE_MM
 				);
 
 				assertBox(boxes.media, expectedArtworkBox(), 'media box');
@@ -282,7 +288,7 @@ export function getPageBoxesCases(): VerifyCase[] {
 			}
 		},
 		{
-			name: 'page-boxes: the produced PDF puts the trim box on the artwork at the default bleed size',
+			name: 'page-boxes: the produced PDF puts the trim box on the artwork at a fixture bleed size',
 			run: async () => {
 				const { bleedSettings } = await import('@/lib/stores');
 				bleedSettings.set({
@@ -290,7 +296,7 @@ export function getPageBoxesCases(): VerifyCase[] {
 					fit: 1,
 					autoRotate: 1,
 					cropMarks: 1,
-					bleedSize: DEFAULT_BLEED_SIZE_MM,
+					bleedSize: FIXTURE_BLEED_SIZE_MM,
 					bleedMode: 'none'
 				});
 

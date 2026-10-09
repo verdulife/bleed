@@ -80,7 +80,13 @@ const DOCUMENT_HEIGHT_MM = 297;
 const FIXTURE_WIDTH_MM = 200;
 const FIXTURE_HEIGHT_MM = 100;
 
-/** The bleed size the app ships with (`bleedSettings.bleedSize` in `src/lib/stores.ts`). */
+/**
+ * A fixture bleed, deliberately different from the store default (3 mm since T2) and passed
+ * explicitly by `makeSettings`, so these cases cannot follow a change of that default. Every
+ * case here runs `bleedMode: 'none'`, which declares no bleed, so the value has no effect on
+ * the geometry - which is exactly why it must stay explicit: nothing would catch an
+ * accidental dependency on the default.
+ */
 const BLEED_SIZE_MM = 2;
 
 /**

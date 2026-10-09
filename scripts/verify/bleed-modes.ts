@@ -102,8 +102,11 @@ const DOCUMENT_HEIGHT_MM = 150;
 
 /**
  * A bleed **below** the mark distance, so the page grows for the marks rather than for the
- * bleed. It is not the app default (2 mm) and it is the historical fixed point of the old
- * box math, which the predecessor suite carried as `NON_DEFAULT_BLEED_SIZE_MM`.
+ * bleed. Its value (`CROPLINE.SIZE - CROPLINE.OVERLAY` = 3 mm) is the historical fixed point
+ * of the old box math, which the predecessor suite carried as `NON_DEFAULT_BLEED_SIZE_MM`.
+ * T2 made 3 mm the store default too, but `makeSettings` always passes it explicitly, so
+ * these cases do not follow the store: a further move of the default cannot relabel any
+ * expectation here.
  */
 const SMALL_BLEED_MM = CROPLINE.SIZE - CROPLINE.OVERLAY;
 

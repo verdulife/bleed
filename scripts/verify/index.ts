@@ -18,6 +18,7 @@ import { getPageBoxesCases } from './page-boxes';
 import { getRenderInfoCases } from './render-info';
 import { getBlankTemplateCases } from './blank-template';
 import { getBleedModeCases } from './bleed-modes';
+import { getBleedSizeCases } from './bleed-size';
 
 const modules: Array<{ label: string; load: VerifyModule }> = [
 	{ label: 'file-ids', load: getFileIdsCases },
@@ -27,7 +28,8 @@ const modules: Array<{ label: string; load: VerifyModule }> = [
 	{ label: 'page-boxes', load: getPageBoxesCases },
 	{ label: 'render-info', load: getRenderInfoCases },
 	{ label: 'blank-template', load: getBlankTemplateCases },
-	{ label: 'bleed-modes', load: getBleedModeCases }
+	{ label: 'bleed-modes', load: getBleedModeCases },
+	{ label: 'bleed-size', load: getBleedSizeCases }
 ];
 
 async function main() {

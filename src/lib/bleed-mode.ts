@@ -44,6 +44,28 @@ export function drawsMirrorBleed(mode: BleedMode): boolean {
 }
 
 /**
+ * The bleed amount the box math consumes, in millimetres: a finite input clamped to >= 0 and
+ * rounded to one decimal. It is the single gate every user change goes through
+ * (`src/components/InputSize.svelte`), so the value the geometry sees is always usable.
+ *
+ * A tenth of a millimetre is as fine as this geometry needs: the boxes end up as PDF units,
+ * and one point is already ~0.353 mm, so a finer fraction is below what the file can carry
+ * and would only add float noise to `art + 2 * bleed`. Clamping at 0 keeps a negative value
+ * from shrinking a box below the trim line (the same floor `pageMarginMM` and
+ * `declaredBleedMM` apply to their own inputs).
+ *
+ * A non-finite input degrades to 0 instead of propagating: the empty `type="number"` field
+ * yields `NaN`, and `Infinity` can arrive from a pasted value. `NaN` would reach
+ * `computePageBoxes` and make `media.width` `NaN`, which pdf-lib would serialize as an
+ * invalid page instead of failing loudly; 0 is the safe prepress meaning of "no bleed".
+ */
+export function normalizeBleedSizeMM(value: number): number {
+	if (!Number.isFinite(value)) return 0;
+
+	return Math.round(Math.max(0, value) * 10) / 10;
+}
+
+/**
  * The page margin **per side**, from the media edge to the trim line, in millimetres.
  *
  * | Crop marks | Mode      | Margin                 |
