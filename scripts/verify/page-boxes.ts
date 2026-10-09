@@ -230,7 +230,7 @@ export function getPageBoxesCases(): VerifyCase[] {
 			}
 		},
 		{
-			name: 'page-boxes: a bleed size larger than the margin clamps the bleed box to the page',
+			name: 'page-boxes: a bleed larger than the margin clamps to the page (defensive clamp, not a contract path)',
 			run: () => {
 				// This case used to encode "a bleed larger than the crop-mark distance" back
 				// when the margin was always `CROPLINE.DISTANCE`. Rule 2 of the v2 contract
@@ -268,23 +268,30 @@ export function getPageBoxesCases(): VerifyCase[] {
 			}
 		},
 		{
-			name: 'page-boxes: without the page margin and without a bleed all three boxes are the artwork',
+			name: 'page-boxes: a zero margin puts every box on the artwork, with or without a declared bleed',
 			run: () => {
 				// The old case passed `withPageMargin: false` together with a non-zero bleed
-				// size, and the flag suppressed both. The margin and the declared bleed are
-				// now separate inputs, so the "no margin, no bleed" geometry - which is what
-				// `cropMarks: 0` with `bleedMode: 'none'` produces - is margin 0 with a bleed
-				// that has nothing to grow into.
-				const boxes = computePageBoxes(
+				// size, and the flag suppressed both. The two inputs are now separate, so this
+				// case states both shapes explicitly rather than relying on the mislabelled one:
+				// a zero margin with a bleed nothing can grow into (the defensive path, named for
+				// what it proves), and a zero margin with no declared bleed at all, which is
+				// exactly what `cropMarks: 0` with `bleedMode: 'none'` produces.
+				const withUndeclaredBleed = computePageBoxes(
 					ARTWORK_WIDTH_MM,
 					ARTWORK_HEIGHT_MM,
 					0,
 					FIXTURE_BLEED_SIZE_MM
 				);
 
-				assertBox(boxes.media, expectedArtworkBox(), 'media box');
-				assertBox(boxes.bleed, expectedArtworkBox(), 'bleed box');
-				assertBox(boxes.trim, expectedArtworkBox(), 'trim box');
+				assertBox(withUndeclaredBleed.media, expectedArtworkBox(), 'media box');
+				assertBox(withUndeclaredBleed.bleed, expectedArtworkBox(), 'bleed box');
+				assertBox(withUndeclaredBleed.trim, expectedArtworkBox(), 'trim box');
+
+				const contractPath = computePageBoxes(ARTWORK_WIDTH_MM, ARTWORK_HEIGHT_MM, 0, 0);
+
+				assertBox(contractPath.media, expectedArtworkBox(), 'no-margin media box');
+				assertBox(contractPath.bleed, expectedArtworkBox(), 'no-margin bleed box');
+				assertBox(contractPath.trim, expectedArtworkBox(), 'no-margin trim box');
 			}
 		},
 		{

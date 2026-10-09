@@ -81,8 +81,19 @@ export function normalizeBleedSizeMM(value: number): number {
  * what lets a 10 mm bleed be filled at all instead of being clamped to the media box. A
  * negative bleed is clamped to 0, so the margin can never shrink below what the marks need.
  */
+/**
+ * A bleed amount that is safe to feed into the box math. A non-finite value (a cleared input
+ * that somehow reached the store as `NaN`) degrades to 0 instead of propagating `NaN` into
+ * every box, which pdf-lib would then serialize as an invalid page. The input normaliser
+ * already guards its own boundary; this is the same guarantee at the policy layer, so no
+ * caller can bypass it.
+ */
+function finiteBleedMM(bleedSizeMM: number): number {
+	return Number.isFinite(bleedSizeMM) ? Math.max(0, bleedSizeMM) : 0;
+}
+
 export function pageMarginMM(cropMarks: 0 | 1, mode: BleedMode, bleedSizeMM: number): number {
-	const bleedMM = Math.max(0, bleedSizeMM);
+	const bleedMM = finiteBleedMM(bleedSizeMM);
 
 	if (cropMarks === 1) return Math.max(CROPLINE.DISTANCE, bleedMM);
 
@@ -101,7 +112,7 @@ export function pageMarginMM(cropMarks: 0 | 1, mode: BleedMode, bleedSizeMM: num
  * file, marks or no marks.
  */
 export function declaredBleedMM(mode: BleedMode, bleedSizeMM: number): number {
-	return mode === 'none' ? 0 : Math.max(0, bleedSizeMM);
+	return mode === 'none' ? 0 : finiteBleedMM(bleedSizeMM);
 }
 
 /**

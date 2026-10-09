@@ -292,6 +292,21 @@ export function getBleedSizeCases(): VerifyCase[] {
 					0,
 					'a negatively infinite bleed must degrade to 0'
 				);
+				// The policy layer repeats the same guarantee (T4): a caller that bypassed the
+				// normaliser must not be able to push `NaN` into the box math either, or pdf-lib
+				// would serialise an invalid page.
+				const { pageMarginMM, declaredBleedMM } = await loadBleedMode();
+
+				assertEqual(
+					pageMarginMM(0, 'mirror', Number.NaN),
+					0,
+					'the page margin must degrade a NaN bleed to 0'
+				);
+				assertEqual(
+					declaredBleedMM('mirror', Number.NaN),
+					0,
+					'the declared bleed must degrade a NaN bleed to 0'
+				);
 			}
 		},
 		{
