@@ -12,9 +12,11 @@ export function generateTitle(settings: BleedSettings) {
 /**
  * The geometry of the document that was just produced, in millimetres, read from page 1 of
  * the generated document: the trim box is the artwork the user asked for, the media box is
- * the page as it was written (with the crop marks) and the bleed box is the bleed area.
- * Reading the boxes back is what lets the UI announce an axis the app derived from the
- * artwork aspect ratio: the value comes from the produced file, not from the settings.
+ * the page as it was written (with the crop marks), the bleed box is the bleed area and the
+ * bleed amount is how far that box extends past the trim box on every side. Reading the
+ * boxes back is what lets the UI announce an axis the app derived from the artwork aspect
+ * ratio, and what lets the output bar show the bleed amount the file really declares: the
+ * values come from the produced document, not from the settings.
  */
 function readRenderInfo(pdfDoc: PDFDocument): RenderInfo {
 	const page = pdfDoc.getPage(0);
@@ -26,6 +28,11 @@ function readRenderInfo(pdfDoc: PDFDocument): RenderInfo {
 		artwork: { width: toMM(trimBox.width), height: toMM(trimBox.height) },
 		media: { width: toMM(mediaBox.width), height: toMM(mediaBox.height) },
 		bleed: { width: toMM(bleedBox.width), height: toMM(bleedBox.height) },
+		// The BleedBox is the TrimBox grown by the amount on every side, so halving the
+		// difference gives the amount per side - exactly 0 in `none` mode, which declares no
+		// bleed. Deriving it here, like the boxes, keeps the bar announcing the produced file
+		// instead of the requested settings.
+		bleedAmountMM: toMM(bleedBox.width - trimBox.width) / 2,
 		pageCount: pdfDoc.getPageCount()
 	};
 }

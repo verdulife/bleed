@@ -8,7 +8,6 @@
 	import InputBleedMode from '@/components/InputBleedMode.svelte';
 	import InputFile from '@/components/InputFile.svelte';
 	import GenerationNotice from '@/components/GenerationNotice.svelte';
-	import RenderInfoPanel from '@/components/RenderInfoPanel.svelte';
 	import SelectPresets from '@/components/SelectPresets.svelte';
 	import ButtonGenerate from './ButtonGenerate.svelte';
 </script>
@@ -18,8 +17,6 @@
 </OptionBox>
 
 <GenerationNotice />
-
-<RenderInfoPanel />
 
 <OptionBox>
 	<InputSizes bind:setting={$bleedSettings.document}>Document size</InputSizes>

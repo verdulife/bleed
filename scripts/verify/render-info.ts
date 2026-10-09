@@ -1,20 +1,36 @@
 /**
- * Verification cases for B1 ("show the sizes that were actually produced").
+ * Verification cases for B1 ("show the sizes that were actually produced") and T3 ("the
+ * output sizes become a full-width bottom bar showing four values").
  *
- * The user wants to see, after a render, the document size **without** crop marks and
- * **with** crop marks - it matters most when one axis is empty and the app derives it from
- * the artwork aspect ratio, because today that decision is invisible. The hard constraint
- * is that those numbers must be read back from the produced PDF (`page.getMediaBox()`,
- * `page.getTrimBox()`, `page.getBleedBox()` on the generated document), never recomputed in
- * the UI from the same formula that drives generation.
+ * The user wants to see, after a render, the document size **without** crop marks, the size
+ * **with** crop marks, the bleed amount that was used and the page count - it matters most
+ * when one axis is empty and the app derives it from the artwork aspect ratio, because today
+ * that decision is invisible. The hard constraint is that those numbers must be read back
+ * from the produced PDF (`page.getMediaBox()`, `page.getTrimBox()`, `page.getBleedBox()` on
+ * the generated document), never recomputed in the UI from the same formula that drives
+ * generation.
+ *
+ * T3 changed what the bar shows. The old panel listed the media box, the growth added by the
+ * crop marks and the **bleed-box size**; the bar shows the trim box (the "without crop
+ * marks" value), the media box (the "with crop marks" value), the bleed **amount** per side
+ * and the page count. The amount is `RenderInfo.bleedAmountMM`, derived from the produced
+ * document as `(bleedBox - trimBox) / 2` (the BleedBox is the TrimBox grown by the amount on
+ * every side), never from the settings. It is 0 in `none` (v2 decision 3 declares no bleed
+ * whatever the configured size says) and the configured size in `mirror`/`natural`. The
+ * cases below assert it for a `none` run with a non-default configured size - the shape that
+ * discriminates a read-back from a settings copy, because the settings say 2 mm and the file
+ * must say 0 - for a mirror fill and for a natural fill with a non-default bleed, and once
+ * against the boxes of the produced file. The bleed **box** stays in `RenderInfo` as the
+ * source the amount is derived from, and is still asserted here even though the bar no longer
+ * shows it.
  *
  * The cases drive the real `generatePDF()` and inspect the `renderInfo` store plus the
  * published blob that `generatePDF` captured with `URL.createObjectURL` (doubled below,
- * following `pdf-errors.ts`). Case 6 reloads the produced bytes and compares them against
- * the published numbers, which is what proves the panel is not deriving anything.
+ * following `pdf-errors.ts`). The last case reloads the produced bytes and compares them
+ * against the published numbers, which is what proves the panel is not deriving anything.
  */
 import { get } from 'svelte/store';
-import type { BleedSettings, BoxSize, RenderInfo, UserFile } from '@/lib/types';
+import type { BleedMode, BleedSettings, BoxSize, RenderInfo, UserFile } from '@/lib/types';
 import { CROPLINE, FILE_TYPE, toMM } from '@/lib/constants';
 import { PDFDocument } from 'pdf-lib';
 import type { PDFPage } from 'pdf-lib';
@@ -82,12 +98,22 @@ const FIXTURE_HEIGHT_MM = 100;
 
 /**
  * A fixture bleed, deliberately different from the store default (3 mm since T2) and passed
- * explicitly by `makeSettings`, so these cases cannot follow a change of that default. Every
- * case here runs `bleedMode: 'none'`, which declares no bleed, so the value has no effect on
- * the geometry - which is exactly why it must stay explicit: nothing would catch an
- * accidental dependency on the default.
+ * explicitly by `makeSettings`, so these cases cannot follow a change of that default. It is
+ * **below** the crop-mark distance, so the page grows for the marks and not for the bleed,
+ * and it is used only by runs that declare no bleed: this is the discriminating shape for
+ * `bleedAmountMM`, because the settings say 2 mm while the produced file must say 0. A
+ * mirror or natural run needs a value that reaches the geometry, which is what
+ * `FILL_BLEED_SIZE_MM` is for.
  */
 const BLEED_SIZE_MM = 2;
+
+/**
+ * The bleed of the fill-mode cases: not the store default, and **above** the crop-mark
+ * distance, so the page grows to `art + 2 x bleed` (v2 decision 2) and the expected media
+ * box cannot be confused with the mark-only one. The margin then equals the bleed, which
+ * `expectedMediaBoxSize` is told explicitly instead of deriving it.
+ */
+const FILL_BLEED_SIZE_MM = CROPLINE.DISTANCE + 1;
 
 /**
  * Every expectation is derived from the constants, and the values come back through a
@@ -101,6 +127,8 @@ const GARBAGE_PDF = new Uint8Array([0x00, 0x01, 0x02, 0x03, 0x04]).buffer;
 type SettingsOverrides = {
 	document?: { width: number; height: number };
 	cropMarks?: 0 | 1;
+	bleedMode?: BleedMode;
+	bleedSize?: number;
 };
 
 function makeSettings(overrides: SettingsOverrides = {}): BleedSettings {
@@ -109,8 +137,8 @@ function makeSettings(overrides: SettingsOverrides = {}): BleedSettings {
 		fit: 1,
 		autoRotate: 1,
 		cropMarks: overrides.cropMarks ?? 1,
-		bleedSize: BLEED_SIZE_MM,
-		bleedMode: 'none'
+		bleedSize: overrides.bleedSize ?? BLEED_SIZE_MM,
+		bleedMode: overrides.bleedMode ?? 'none'
 	};
 }
 
@@ -162,24 +190,42 @@ function assertSize(actual: BoxSize, expected: BoxSize, label: string) {
 	);
 }
 
-/** The media box: the artwork plus the crop-mark distance on every side. */
-function expectedMediaSize(): BoxSize {
+/**
+ * The bleed **amount** per side, in millimetres: how far the produced BleedBox extends past
+ * the produced TrimBox. Asserted on its own because it is the value the bar shows, and
+ * because in `none` mode the bleed box is textually the trim box, so the box assertions
+ * alone would no longer prove that the amount was read back.
+ */
+function assertAmount(actual: number, expected: number, label: string) {
+	assert(
+		Math.abs(actual - expected) < TOLERANCE_MM,
+		`${label}: expected ${expected} mm, got ${actual} mm`
+	);
+}
+
+/** The media box: the artwork plus `marginMM` on every side (crop marks on). */
+function expectedMediaBoxSize(artwork: BoxSize, marginMM: number): BoxSize {
 	return {
-		width: DOCUMENT_WIDTH_MM + 2 * CROPLINE.DISTANCE,
-		height: DOCUMENT_HEIGHT_MM + 2 * CROPLINE.DISTANCE
+		width: artwork.width + 2 * marginMM,
+		height: artwork.height + 2 * marginMM
 	};
 }
 
 /**
- * The bleed box of a `bleedMode: 'none'` run (the only mode these cases use).
+ * The BleedBox of a run, in millimetres: the TrimBox grown by `declaredMM` on every side.
  *
- * v2 decision 3 changed this expectation: it used to be the media box inset by
- * `CROPLINE.DISTANCE - BLEED_SIZE_MM`, that is `art + 2 x BLEED_SIZE_MM`, because the
- * pre-v2 contract declared a bleed in `none` mode too. `none` now declares **no** bleed, so
- * the produced BleedBox equals the TrimBox and the panel reads the artwork size back.
+ * v2 decision 3 changed this expectation for `none`: the box used to be the media box inset
+ * by `CROPLINE.DISTANCE - BLEED_SIZE_MM`, that is `art + 2 x BLEED_SIZE_MM`, because the
+ * pre-v2 contract declared a bleed in `none` mode too. `none` now declares no bleed, so the
+ * produced BleedBox equals the TrimBox - with `declaredMM = 0` this helper is textually
+ * identical to `documentSize()`. That is exactly why the amount is asserted next to it: the
+ * box alone would have no discriminating power left in `none`.
  */
-function expectedBleedSize(): BoxSize {
-	return documentSize();
+function expectedBleedBoxSize(declaredMM: number): BoxSize {
+	return {
+		width: DOCUMENT_WIDTH_MM + 2 * declaredMM,
+		height: DOCUMENT_HEIGHT_MM + 2 * declaredMM
+	};
 }
 
 function documentSize(): BoxSize {
@@ -201,8 +247,17 @@ export function getRenderInfoCases(): VerifyCase[] {
 				assert(info !== null, 'a successful run must publish render info');
 
 				assertSize(info.artwork, documentSize(), 'artwork (the trim box)');
-				assertSize(info.media, expectedMediaSize(), 'media box (with crop marks)');
-				assertSize(info.bleed, expectedBleedSize(), 'bleed box');
+				assertSize(
+					info.media,
+					expectedMediaBoxSize(documentSize(), CROPLINE.DISTANCE),
+					'media box (with crop marks)'
+				);
+				assertSize(info.bleed, expectedBleedBoxSize(0), 'bleed box in none mode');
+				// Decision 3 declares no bleed, so this run must report an amount of 0 even
+				// though the settings ask for `BLEED_SIZE_MM`. An implementation that copied
+				// the configured size into the panel would pass every box assertion above and
+				// fail only here, which is the discriminating assertion T3 added.
+				assertAmount(info.bleedAmountMM, 0, 'bleed amount in none mode');
 				assertEqual(info.pageCount, 1, 'page count');
 			}
 		},
@@ -225,11 +280,82 @@ export function getRenderInfoCases(): VerifyCase[] {
 				assertSize(info.artwork, artworkSize, 'artwork derived from the artwork aspect ratio');
 				assertSize(
 					info.media,
-					{
-						width: FIXTURE_WIDTH_MM + 2 * CROPLINE.DISTANCE,
-						height: FIXTURE_HEIGHT_MM + 2 * CROPLINE.DISTANCE
-					},
+					expectedMediaBoxSize(artworkSize, CROPLINE.DISTANCE),
 					'media box derived from the artwork aspect ratio'
+				);
+			}
+		},
+		{
+			// New in T3: a mirror fill must report the configured bleed as the amount per side.
+			// The bleed box never reaches the bars, so the amount is the only published value
+			// that carries the fill; asserting it keeps decision 2's geometry observable
+			// through the panel's own contract.
+			name: 'render-info: a mirror fill reports the configured bleed as an amount per side',
+			run: async () => {
+				const fixture = await buildPaintedPdfFixture(DOCUMENT_WIDTH_MM, DOCUMENT_HEIGHT_MM);
+				await runGeneration(
+					[makeUserFile('poster.pdf', fixture, 1)],
+					makeSettings({ bleedMode: 'mirror', bleedSize: FILL_BLEED_SIZE_MM })
+				);
+
+				const info = await renderInfoOf();
+				assert(info !== null, 'a successful run must publish render info');
+
+				assertSize(info.artwork, documentSize(), 'artwork stays the document in a mirror fill');
+				// The bleed is larger than the crop-mark distance, so the margin equals the
+				// bleed (v2 decision 2) and the page grows to `art + 2 x bleed`.
+				assertSize(
+					info.media,
+					expectedMediaBoxSize(documentSize(), FILL_BLEED_SIZE_MM),
+					'media box of a mirror fill'
+				);
+				assertSize(
+					info.bleed,
+					expectedBleedBoxSize(FILL_BLEED_SIZE_MM),
+					'bleed box of a mirror fill'
+				);
+				assertAmount(
+					info.bleedAmountMM,
+					FILL_BLEED_SIZE_MM,
+					'bleed amount of a mirror fill'
+				);
+			}
+		},
+		{
+			// New in T3: the same amount contract for `natural`, which fits a different box
+			// (`artworkTargetBoxForBleedMode` resolves to `bleed`) and always covers. The
+			// amount is a property of the produced file, so it must not depend on which box
+			// the artwork was fitted into.
+			name: 'render-info: a natural fill reports the configured bleed as an amount per side',
+			run: async () => {
+				const fixture = await buildPaintedPdfFixture(DOCUMENT_WIDTH_MM, DOCUMENT_HEIGHT_MM);
+				await runGeneration(
+					[makeUserFile('poster.pdf', fixture, 1)],
+					makeSettings({ bleedMode: 'natural', bleedSize: FILL_BLEED_SIZE_MM })
+				);
+
+				const info = await renderInfoOf();
+				assert(info !== null, 'a successful run must publish render info');
+
+				assertSize(
+					info.artwork,
+					documentSize(),
+					'artwork stays the document in a natural fill'
+				);
+				assertSize(
+					info.media,
+					expectedMediaBoxSize(documentSize(), FILL_BLEED_SIZE_MM),
+					'media box of a natural fill'
+				);
+				assertSize(
+					info.bleed,
+					expectedBleedBoxSize(FILL_BLEED_SIZE_MM),
+					'bleed box of a natural fill'
+				);
+				assertAmount(
+					info.bleedAmountMM,
+					FILL_BLEED_SIZE_MM,
+					'bleed amount of a natural fill'
 				);
 			}
 		},
@@ -248,6 +374,9 @@ export function getRenderInfoCases(): VerifyCase[] {
 				assertSize(info.artwork, documentSize(), 'artwork without crop marks');
 				assertSize(info.media, documentSize(), 'media box without crop marks');
 				assertSize(info.bleed, documentSize(), 'bleed box without crop marks');
+				// New in T3: with no marks and no bleed fill the page is the document, so the
+				// amount must be 0 as well - the row the bar shows instead of the box size.
+				assertAmount(info.bleedAmountMM, 0, 'bleed amount without crop marks');
 			}
 		},
 		{
@@ -303,10 +432,17 @@ export function getRenderInfoCases(): VerifyCase[] {
 			}
 		},
 		{
+			// The fixture moved from `none` to `mirror` in T3, deliberately: with `none` the
+			// amount read back is 0, so the "published numbers are the file's numbers" property
+			// would not be exercised for the value the bar now shows. `mirror` with a
+			// non-default bleed makes all four published values non-trivial.
 			name: 'render-info: the published numbers match the produced PDF instead of being recomputed',
 			run: async () => {
 				const fixture = await buildPaintedPdfFixture(DOCUMENT_WIDTH_MM, DOCUMENT_HEIGHT_MM);
-				await runGeneration([makeUserFile('poster.pdf', fixture, 1)], makeSettings());
+				await runGeneration(
+					[makeUserFile('poster.pdf', fixture, 1)],
+					makeSettings({ bleedMode: 'mirror', bleedSize: FILL_BLEED_SIZE_MM })
+				);
 
 				assertEqual(publishedBlobs.length, 1, 'the run must publish its produced file');
 				const info = await renderInfoOf();
@@ -316,6 +452,7 @@ export function getRenderInfoCases(): VerifyCase[] {
 				const page = await loadProducedPage(publishedBlobs[0]);
 				const trim = page.getTrimBox();
 				const media = page.getMediaBox();
+				const bleed = page.getBleedBox();
 
 				assertSize(
 					info.artwork,
@@ -326,6 +463,18 @@ export function getRenderInfoCases(): VerifyCase[] {
 					info.media,
 					{ width: toMM(media.width), height: toMM(media.height) },
 					'published media against the produced media box'
+				);
+				assertSize(
+					info.bleed,
+					{ width: toMM(bleed.width), height: toMM(bleed.height) },
+					'published bleed box against the produced bleed box'
+				);
+				// The amount is recomputed here from the boxes the file carries, not from the
+				// settings: this is the assertion that the published amount is a read-back.
+				assertAmount(
+					info.bleedAmountMM,
+					toMM(bleed.width - trim.width) / 2,
+					'published bleed amount against the produced boxes'
 				);
 			}
 		}

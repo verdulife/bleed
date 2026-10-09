@@ -9,13 +9,21 @@ export type BoxSize = { width: number; height: number };
 /**
  * The geometry of the document that was produced, in millimetres, as it was read back from
  * the generated PDF: `artwork` is the trim-box size (the document the user asked for),
- * `media` is the media-box size (the page with the crop marks) and `bleed` is the
- * bleed-box size.
+ * `media` is the media-box size (the page with the crop marks), `bleed` is the bleed-box
+ * size and `bleedAmountMM` is the bleed **amount per side**.
+ *
+ * `bleedAmountMM` is what the output bar shows as "Bleed size": the amount the produced
+ * BleedBox extends past the TrimBox, never the bleed-box size, which grows with the artwork
+ * and says nothing about how much bleed was asked for. It is derived from the produced boxes
+ * (`(bleedBox - trimBox) / 2`), so a mode that declares no bleed reports exactly 0 whatever
+ * the configured `bleedSize` says. The `bleed` box stays published as the source it is
+ * derived from.
  */
 export type RenderInfo = {
 	artwork: BoxSize;
 	media: BoxSize;
 	bleed: BoxSize;
+	bleedAmountMM: number;
 	pageCount: number;
 };
 
