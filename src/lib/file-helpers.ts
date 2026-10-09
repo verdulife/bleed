@@ -2,7 +2,8 @@ import type { PDFOptions } from '@/lib/types';
 import { degrees, PDFDocument, PDFEmbeddedPage, PDFImage, PDFPage } from 'pdf-lib';
 import { get } from 'svelte/store';
 import { CROPLINE, FILE_TYPE, isJPEG, isPDF, isPNG, POINTS_TO_MM, toPT } from '@/lib/constants';
-import { userFiles, bleedSettings } from '@/lib/stores';
+import { userFiles, bleedSettings, manualOrder } from '@/lib/stores';
+import { addFilesInOrder } from '@/lib/file-order';
 import { drawMirrorBleed } from '@/lib/settings-helpers';
 import { addCropMarks } from '@/lib/crop-marks';
 import { closeCropMask, openCropMask } from './pdf-extend';
@@ -78,7 +79,7 @@ export async function pushFilesToStore(files: FileList) {
 		}
 	});
 
-	userFiles.update((store) => [...store, ...validFiles]);
+	userFiles.set(addFilesInOrder(get(userFiles), validFiles, get(manualOrder)));
 }
 
 export function needsRotation(embedFile: PDFEmbeddedPage | PDFImage, page: PDFPage) {

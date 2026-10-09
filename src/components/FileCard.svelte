@@ -13,7 +13,10 @@
 	const [name] = fileName.split('.');
 </script>
 
-<li class="w-full border-b border-slate-900 p-2 last:border-b-0">
+<!-- The zone requires this single `<li>` as the item root; the dndzone action applies the
+     actual drag handling to it (it sets `draggable = false` and its own pointer listeners), so
+     a native `draggable` attribute is not needed. -->
+<li class="w-full cursor-grab border-b border-slate-900 p-2 last:border-b-0">
 	<article class="relative flex w-full items-center justify-start gap-2 overflow-hidden text-left">
 		<button class=" text-gray-500">
 			{#if fileType === FILE_TYPE.JPEG}
@@ -31,8 +34,11 @@
 			{name}
 		</p>
 
+		<!-- The library ignores mousedown whose target is a button (it checks `value`), but not
+		     its inner SVG, so the delete gesture must stop before it reaches the row. -->
 		<button
 			on:click={() => removeFile(id)}
+			on:mousedown|stopPropagation
 			class="ml-auto text-gray-600 transition-colors hover:text-red-500/80"
 		>
 			<Trash />

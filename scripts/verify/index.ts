@@ -11,9 +11,11 @@
  */
 import type { VerifyCase, VerifyModule } from './harness';
 import { getFileIdsCases } from './file-ids';
+import { getFileOrderCases } from './file-order';
 
 const modules: Array<{ label: string; load: VerifyModule }> = [
-	{ label: 'file-ids', load: getFileIdsCases }
+	{ label: 'file-ids', load: getFileIdsCases },
+	{ label: 'file-order', load: getFileOrderCases }
 ];
 
 async function main() {

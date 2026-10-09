@@ -3,7 +3,17 @@
 
 	let isDragOver = false;
 
-	function handleDragOver() {
+	/**
+	 * This wrapper handles operating-system file drops for the whole page, so in-page drags
+	 * (dragging selected text, a link, or anything that is not a file) must not reach it.
+	 * Only a `dataTransfer` that actually carries files activates the overlay or the ingestion.
+	 */
+	function carriesFiles(event: DragEvent): boolean {
+		return !!event.dataTransfer?.types.includes('Files');
+	}
+
+	function handleDragOver(event: DragEvent) {
+		if (!carriesFiles(event)) return;
 		isDragOver = true;
 	}
 
@@ -13,9 +23,10 @@
 
 	async function handleDrop(event: DragEvent) {
 		handleDragLeave();
-		if (!event.dataTransfer) return;
+		const dataTransfer = event.dataTransfer;
+		if (!dataTransfer?.files.length) return;
 
-		const files = event.dataTransfer.files;
+		const files = dataTransfer.files;
 		console.log('todo: check if files are pdf or image', files);
 
 		await pushFilesToStore(files);

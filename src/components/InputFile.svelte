@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { inputFileAsync, pushFilesToStore } from '@/lib/file-helpers';
-	import { userFiles } from '@/lib/stores';
+	import { userFiles, manualOrder } from '@/lib/stores';
 
 	import FileList from '@/components/FileList.svelte';
 	import Trash from '@/icons/Trash.svelte';
@@ -15,6 +15,8 @@
 		if (!check) return;
 
 		$userFiles = [];
+		// An empty list has no meaningful manual order: the next add must be alphabetical again.
+		manualOrder.set(false);
 	}
 </script>
 
