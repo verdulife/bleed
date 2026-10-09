@@ -224,6 +224,25 @@ function addCropMarksIfEnabled(page: PDFPage) {
 	if (get(bleedSettings).cropMarksAndBleed) addCropMarks(page);
 }
 
+/**
+ * One output page carrying the prepress geometry and the crop marks but no artwork: the
+ * shared primitive for an intentional empty page. Both the blank template of an empty file
+ * list (`generatePDF`, B2) and a source page without a content stream (a blank back, a
+ * separator, a page that only carries annotations) are exactly this page, so neither the
+ * box math nor the crop-mark decision is duplicated between them.
+ *
+ * The size is passed in millimetres. `rotate` is always false: rotation follows from the
+ * artwork aspect ratio, and a page without artwork has none to rotate against.
+ */
+export function addBlankPage(pdfDoc: PDFDocument, widthMM: number, heightMM: number): PDFPage {
+	const page = pdfDoc.addPage();
+
+	applyPageGeometry(page, widthMM, heightMM, false);
+	addCropMarksIfEnabled(page);
+
+	return page;
+}
+
 function drawPdf(embedFile: PDFEmbeddedPage, page: PDFPage, embedOptions: PDFOptions) {
 	const { mirrorBleed } = get(bleedSettings);
 
@@ -251,20 +270,17 @@ export const fileHandler = {
 		let embedIndex = 0;
 
 		for (const sourcePage of sourcePages) {
-			const page = pdfDoc.addPage();
-
 			// A source page without a content stream (a blank back, a separator, a page
 			// carrying only annotations) has no artwork to embed. Keep the page instead:
-			// same geometry and crop marks as a real page, no artwork.
+			// same geometry and crop marks as a real page, no artwork. Its source size is a
+			// point value, and `addBlankPage` takes millimetres.
 			if (!hasContents(sourcePage)) {
 				const mediaBox = sourcePage.getMediaBox();
-				// Rotation follows from the artwork aspect ratio, and an empty page has no
-				// artwork to rotate against, so the flag is false here.
-				applyPageGeometry(page, toMM(mediaBox.width), toMM(mediaBox.height), false);
-				addCropMarksIfEnabled(page);
+				addBlankPage(pdfDoc, toMM(mediaBox.width), toMM(mediaBox.height));
 				continue;
 			}
 
+			const page = pdfDoc.addPage();
 			const embedFile = embedPages[embedIndex];
 			embedIndex += 1;
 

@@ -242,10 +242,17 @@ export function getRenderInfoCases(): VerifyCase[] {
 			}
 		},
 		{
-			name: 'render-info: an empty file list publishes nothing and clears the panel',
+			// B2 moved this case: an empty file list no longer leaves the panel empty, it
+			// produces an intentional blank template whose size the panel announces. The
+			// "clears the previous run" half is still asserted: the template publishes its own
+			// geometry (the configured document size) instead of the previous run's.
+			name: 'render-info: an empty file list replaces the previous panel with the template size',
 			run: async () => {
-				const fixture = await buildPaintedPdfFixture(DOCUMENT_WIDTH_MM, DOCUMENT_HEIGHT_MM);
-				await runGeneration([makeUserFile('poster.pdf', fixture, 1)], makeSettings());
+				const fixture = await buildPaintedPdfFixture(FIXTURE_WIDTH_MM, FIXTURE_HEIGHT_MM);
+				await runGeneration(
+					[makeUserFile('artwork.pdf', fixture, 1)],
+					makeSettings({ document: { width: 0, height: 0 } })
+				);
 				assert(
 					(await renderInfoOf()) !== null,
 					'the successful run must populate render info in the first place'
@@ -253,16 +260,14 @@ export function getRenderInfoCases(): VerifyCase[] {
 
 				await runGeneration([], makeSettings());
 
-				assertEqual(
-					await renderInfoOf(),
-					null,
-					'an empty file list must not leave a previous run in the panel'
-				);
-				assertEqual(publishedBlobs.length, 0, 'an empty file list must publish no blob');
+				const info = await renderInfoOf();
+				assert(info !== null, 'the intentional template must publish its own geometry');
+				assertSize(info.artwork, documentSize(), 'the template artwork');
+				assertEqual(publishedBlobs.length, 1, 'the intentional template must be published');
 				assertArrayEqual(
 					await generationErrorsOf(),
 					[],
-					'an intentional empty output must not be reported as a failure'
+					'an intentional template must not be reported as a failure'
 				);
 			}
 		},

@@ -2,8 +2,8 @@ import type { BleedSettings, RenderInfo } from '@/lib/types';
 import { PDFDocument } from 'pdf-lib';
 import { get } from 'svelte/store';
 import { bleedSettings, userFiles, previewBlobUri, generationErrors, renderInfo } from '@/lib/stores';
-import { toMM } from '@/lib/constants';
-import { fileHandler } from '@/lib/file-helpers';
+import { SIZE_PRESETS, toMM } from '@/lib/constants';
+import { addBlankPage, fileHandler } from '@/lib/file-helpers';
 
 export function generateTitle(settings: BleedSettings) {
 	return `${settings.document.width || "Prop"} × ${settings.document.height || "Prop"} mm`;
@@ -39,14 +39,29 @@ export async function generatePDF() {
 	generationErrors.set([]);
 	renderInfo.set(null);
 
-	if (files.length === 0) return;
-
 	const pdfDoc = await PDFDocument.create();
 	pdfDoc.setTitle(generateTitle(settings));
 	pdfDoc.setAuthor('Bleed');
 
 	const failures: string[] = [];
 
+	if (files.length === 0) {
+		// No files is not a failure: it is a request for a blank template that honours the
+		// current settings, so this run produces exactly one artwork-less page with the usual
+		// prepress geometry and crop marks - the same primitive the PDF handler uses for a
+		// blank source page. With no artwork there is no aspect ratio to derive a missing axis
+		// from, so an empty axis falls back to the A4 preset, independently per axis: this is
+		// the one place where the app invents a size.
+		const fallback = SIZE_PRESETS.A4;
+
+		addBlankPage(
+			pdfDoc,
+			settings.document.width || fallback.width,
+			settings.document.height || fallback.height
+		);
+	}
+
+	// A no-op for the template run above: with no files there is nothing to process.
 	for (const file of files) {
 		try {
 			const { fileType, fileBuffer } = file;
@@ -59,8 +74,9 @@ export async function generatePDF() {
 
 	// Files were provided but nothing reached the document: `save()` would otherwise add a
 	// default A4 page (`addDefaultPage: true`), so the user would download a blank sheet with
-	// no explanation. Report it and publish nothing. This is deliberately *not* the empty-list
-	// case above, which returns before the document is even created.
+	// no explanation. Report it and publish nothing. This stays the counterpart of the
+	// template above, which always adds a page: "no files" is an intentional blank output,
+	// "files that produced no page" is a reported failure that publishes nothing.
 	if (pdfDoc.getPageCount() === 0) {
 		failures.push('No pages were generated');
 		generationErrors.set(failures);
